@@ -52,8 +52,15 @@ func main() {
 	go jm.StartScheduler()
 
 	router := gin.Default()
+	router.LoadHTMLGlob("templates/index.html")
 	router.Use(middleware.ErrorHandler())
 	router.Use(middleware.TransactionMiddleware(txManager))
+
+	router.GET("/", func(c *gin.Context) {
+		c.HTML(200, "index.html", gin.H{
+			"Host": cfg.ServerHost,
+		})
+	})
 
 	api := router.Group("/api")
 	{
