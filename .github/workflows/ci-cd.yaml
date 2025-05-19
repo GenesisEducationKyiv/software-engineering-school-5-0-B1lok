@@ -1,0 +1,60 @@
+name: CI-CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      - name: Set up Docker Build
+        uses: docker/setup-buildx-action@v3
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/weather-api:latest
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC_IP }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "Pulling latest image..."
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/weather-api:latest
+            
+            echo "Stopping existing container..."
+            sudo docker stop weather-api || true
+            sudo docker rm weather-api || true
+            
+            echo "Running new container..."
+            sudo docker run -d --name weather-api -p 8080:8080 \
+              -e DB_HOST=${{ secrets.DB_HOST }} \
+              -e DB_PORT=${{ secrets.DB_PORT }} \
+              -e DB_USER=${{ secrets.DB_USER }} \
+              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+              -e DB_NAME=${{ secrets.DB_NAME }} \
+              -e SERVER_HOST=${{ secrets.SERVER_HOST }} \
+              -e SERVER_PORT=${{ secrets.SERVER_PORT }} \
+              -e WEATHER_API_KEY=${{ secrets.WEATHER_API_KEY }} \
+              -e EMAIL_HOST=${{ secrets.EMAIL_HOST }} \
+              -e EMAIL_PORT=${{ secrets.EMAIL_PORT }} \
+              -e EMAIL_USERNAME=${{ secrets.EMAIL_USERNAME }} \
+              -e EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }} \
+              ${{ secrets.DOCKERHUB_USERNAME }}/weather-api:latest
