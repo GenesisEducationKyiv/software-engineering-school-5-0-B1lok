@@ -57,9 +57,7 @@ func main() {
 	router.Use(middleware.TransactionMiddleware(txManager))
 
 	router.GET("/", func(c *gin.Context) {
-		c.HTML(200, "index.html", gin.H{
-			"Host": cfg.ServerHost,
-		})
+		c.HTML(200, "index.html", nil)
 	})
 
 	api := router.Group("/api")

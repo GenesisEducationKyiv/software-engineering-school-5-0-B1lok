@@ -44,7 +44,7 @@ func (h *HourlyWeatherUpdateJob) Name() string {
 }
 
 func (h *HourlyWeatherUpdateJob) Schedule() string {
-	return "*/15 * * * * *" // TODO change to hourly "0 0 * * * *"
+	return "0 0 * * * *"
 }
 
 func (h *HourlyWeatherUpdateJob) Run(ctx context.Context) error {
