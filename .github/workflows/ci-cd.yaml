@@ -45,16 +45,16 @@ jobs:
             
             echo "Running new container..."
             sudo docker run -d --name weather-api -p 8080:8080 \
-              -e DB_HOST=${{ secrets.DB_HOST }} \
-              -e DB_PORT=${{ secrets.DB_PORT }} \
-              -e DB_USER=${{ secrets.DB_USER }} \
-              -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
-              -e DB_NAME=${{ secrets.DB_NAME }} \
-              -e SERVER_HOST=${{ secrets.SERVER_HOST }} \
-              -e SERVER_PORT=${{ secrets.SERVER_PORT }} \
-              -e WEATHER_API_KEY=${{ secrets.WEATHER_API_KEY }} \
-              -e EMAIL_HOST=${{ secrets.EMAIL_HOST }} \
-              -e EMAIL_PORT=${{ secrets.EMAIL_PORT }} \
-              -e EMAIL_USERNAME=${{ secrets.EMAIL_USERNAME }} \
-              -e EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }} \
+              -e "DB_HOST=${{ secrets.DB_HOST }}" \
+              -e "DB_PORT=${{ secrets.DB_PORT }}" \
+              -e "DB_USER=${{ secrets.DB_USER }}" \
+              -e "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" \
+              -e "DB_NAME=${{ secrets.DB_NAME }}" \
+              -e "SERVER_HOST=${{ secrets.SERVER_HOST }}" \
+              -e "SERVER_PORT=${{ secrets.SERVER_PORT }}" \
+              -e "WEATHER_API_KEY=${{ secrets.WEATHER_API_KEY }}" \
+              -e "EMAIL_HOST=${{ secrets.EMAIL_HOST }}" \
+              -e "EMAIL_PORT=${{ secrets.EMAIL_PORT }}" \
+              -e "EMAIL_USERNAME=${{ secrets.EMAIL_USERNAME }}" \
+              -e "EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" \
               ${{ secrets.DOCKERHUB_USERNAME }}/weather-api:latest
