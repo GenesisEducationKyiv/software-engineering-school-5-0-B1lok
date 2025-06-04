@@ -24,7 +24,7 @@ jobs:
         run: go test -v ./...
   build:
     runs-on: ubuntu-latest
-    if: ${{ secrets.DISABLE_DEPLOY != 'true' }}
+    if: ${{ vars.DISABLE_DEPLOY != 'true' }}
     needs: test
     steps:
       - uses: actions/checkout@v3
@@ -44,7 +44,7 @@ jobs:
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/weather-api:latest
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ secrets.DISABLE_DEPLOY != 'true' }}
+    if: ${{ vars.DISABLE_DEPLOY != 'true' }}
     needs: build
     steps:
       - uses: actions/checkout@v3
