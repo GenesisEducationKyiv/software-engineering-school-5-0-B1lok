@@ -26,6 +26,8 @@ func ErrorHandler() gin.HandlerFunc {
 			return
 		}
 		log.Printf("[ERROR] unhandled error: %v", err)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"description": "Internal server error"})
+		c.AbortWithStatusJSON(
+			http.StatusInternalServerError, gin.H{"description": "Internal server error"},
+		)
 	}
 }

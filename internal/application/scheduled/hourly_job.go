@@ -76,7 +76,6 @@ func (h *HourlyWeatherUpdateJob) Run(ctx context.Context) error {
 	}
 
 	for _, subscriptionGroup := range groupedSubscriptions {
-
 		select {
 		case <-ctx.Done():
 			close(taskChan)
@@ -139,7 +138,8 @@ func (h *HourlyWeatherUpdateJob) Run(ctx context.Context) error {
 	return nil
 }
 
-func (h *HourlyWeatherUpdateJob) emailWorker(ctx context.Context, taskChan <-chan EmailTask, errChan chan<- error, wg *sync.WaitGroup) {
+func (h *HourlyWeatherUpdateJob) emailWorker(
+	ctx context.Context, taskChan <-chan EmailTask, errChan chan<- error, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	for task := range taskChan {
@@ -160,7 +160,9 @@ func (h *HourlyWeatherUpdateJob) emailWorker(ctx context.Context, taskChan <-cha
 	}
 }
 
-func (h *HourlyWeatherUpdateJob) toWeatherHourlyEmail(subscription *models.Subscription, weatherDaily *models.WeatherHourly) *email.WeatherHourlyEmail {
+func (h *HourlyWeatherUpdateJob) toWeatherHourlyEmail(
+	subscription *models.Subscription,
+	weatherDaily *models.WeatherHourly) *email.WeatherHourlyEmail {
 	return &email.WeatherHourlyEmail{
 		To:             subscription.Email,
 		Frequency:      string(subscription.Frequency),

@@ -12,11 +12,16 @@ import (
 	"weather-api/pkg/errors"
 )
 
+const (
+	testHost   = "http://example.com/"
+	validToken = "valid-token-123"
+)
+
 func TestSubscriptionService_Subscribe_Success(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
 	mockSender := new(mocks.MockEmailSender)
-	host := "http://example.com/"
+	host := testHost
 
 	service := NewSubscriptionService(mockRepo, mockValidator, mockSender, host)
 
@@ -27,7 +32,7 @@ func TestSubscriptionService_Subscribe_Success(t *testing.T) {
 		Frequency: "daily",
 	}
 
-	validatedCity := "Berlin"
+	validatedCity := validatedCity
 	mockValidator.On("Validate", "berlin").Return(validatedCity, nil)
 
 	lookup := &models.SubscriptionLookup{
@@ -59,7 +64,7 @@ func TestSubscriptionService_Subscribe_InvalidCity(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
 	mockSender := new(mocks.MockEmailSender)
-	host := "http://example.com/"
+	host := testHost
 
 	service := NewSubscriptionService(mockRepo, mockValidator, mockSender, host)
 
@@ -88,7 +93,7 @@ func TestSubscriptionService_Subscribe_AlreadyExists(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
 	mockSender := new(mocks.MockEmailSender)
-	host := "http://example.com/"
+	host := testHost
 
 	service := NewSubscriptionService(mockRepo, mockValidator, mockSender, host)
 
@@ -99,7 +104,7 @@ func TestSubscriptionService_Subscribe_AlreadyExists(t *testing.T) {
 		Frequency: "daily",
 	}
 
-	validatedCity := "Berlin"
+	validatedCity := validatedCity
 	mockValidator.On("Validate", "berlin").Return(validatedCity, nil)
 
 	lookup := &models.SubscriptionLookup{
@@ -127,7 +132,7 @@ func TestSubscriptionService_Subscribe_RepositoryError(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
 	mockSender := new(mocks.MockEmailSender)
-	host := "http://example.com/"
+	host := testHost
 
 	service := NewSubscriptionService(mockRepo, mockValidator, mockSender, host)
 
@@ -138,7 +143,7 @@ func TestSubscriptionService_Subscribe_RepositoryError(t *testing.T) {
 		Frequency: "daily",
 	}
 
-	validatedCity := "Berlin"
+	validatedCity := validatedCity
 	mockValidator.On("Validate", "berlin").Return(validatedCity, nil)
 
 	lookup := &models.SubscriptionLookup{
@@ -167,7 +172,7 @@ func TestSubscriptionService_Subscribe_InvalidFrequency(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
 	mockSender := new(mocks.MockEmailSender)
-	host := "http://example.com/"
+	host := testHost
 
 	service := NewSubscriptionService(mockRepo, mockValidator, mockSender, host)
 
@@ -178,7 +183,7 @@ func TestSubscriptionService_Subscribe_InvalidFrequency(t *testing.T) {
 		Frequency: "invalid",
 	}
 
-	validatedCity := "Berlin"
+	validatedCity := validatedCity
 	mockValidator.On("Validate", "berlin").Return(validatedCity, nil)
 
 	validatedCmd := &command.SubscribeCommand{
@@ -207,7 +212,7 @@ func TestSubscriptionService_Subscribe_CreateError(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
 	mockSender := new(mocks.MockEmailSender)
-	host := "http://example.com/"
+	host := testHost
 
 	service := NewSubscriptionService(mockRepo, mockValidator, mockSender, host)
 
@@ -218,7 +223,7 @@ func TestSubscriptionService_Subscribe_CreateError(t *testing.T) {
 		Frequency: "daily",
 	}
 
-	validatedCity := "Berlin"
+	validatedCity := validatedCity
 	mockValidator.On("Validate", "berlin").Return(validatedCity, nil)
 
 	lookup := &models.SubscriptionLookup{
@@ -248,7 +253,7 @@ func TestSubscriptionService_Subscribe_EmailError(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
 	mockSender := new(mocks.MockEmailSender)
-	host := "http://example.com/"
+	host := testHost
 
 	service := NewSubscriptionService(mockRepo, mockValidator, mockSender, host)
 
@@ -259,7 +264,7 @@ func TestSubscriptionService_Subscribe_EmailError(t *testing.T) {
 		Frequency: "daily",
 	}
 
-	validatedCity := "Berlin"
+	validatedCity := validatedCity
 	mockValidator.On("Validate", "berlin").Return(validatedCity, nil)
 
 	lookup := &models.SubscriptionLookup{
@@ -277,7 +282,9 @@ func TestSubscriptionService_Subscribe_EmailError(t *testing.T) {
 	mockRepo.On("Create", ctx, mock.AnythingOfType("*models.Subscription")).Return(subscription, nil)
 
 	emailErr := errors.New("Failed to send email", http.StatusInternalServerError)
-	mockSender.On("ConfirmationEmail", mock.AnythingOfType("*email.ConfirmationEmail")).Return(emailErr)
+	mockSender.On(
+		"ConfirmationEmail", mock.AnythingOfType("*email.ConfirmationEmail"),
+	).Return(emailErr)
 
 	err := service.Subscribe(ctx, cmd)
 
@@ -293,12 +300,12 @@ func TestSubscriptionService_Confirm_Success(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
 	mockSender := new(mocks.MockEmailSender)
-	host := "http://example.com/"
+	host := testHost
 
 	service := NewSubscriptionService(mockRepo, mockValidator, mockSender, host)
 
 	ctx := context.Background()
-	token := "valid-token-123"
+	token := validToken
 
 	subscription := &models.Subscription{
 		ID:        1,
@@ -319,7 +326,9 @@ func TestSubscriptionService_Confirm_Success(t *testing.T) {
 		Token:     token,
 		Confirmed: true,
 	}
-	mockRepo.On("Update", ctx, mock.AnythingOfType("*models.Subscription")).Return(updatedSubscription, nil)
+	mockRepo.On(
+		"Update", ctx, mock.AnythingOfType("*models.Subscription"),
+	).Return(updatedSubscription, nil)
 
 	err := service.Confirm(ctx, token)
 
@@ -331,7 +340,7 @@ func TestSubscriptionService_Confirm_TokenNotFound(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
 	mockSender := new(mocks.MockEmailSender)
-	host := "http://example.com/"
+	host := testHost
 
 	service := NewSubscriptionService(mockRepo, mockValidator, mockSender, host)
 
@@ -356,12 +365,12 @@ func TestSubscriptionService_Confirm_RepositoryError(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
 	mockSender := new(mocks.MockEmailSender)
-	host := "http://example.com/"
+	host := testHost
 
 	service := NewSubscriptionService(mockRepo, mockValidator, mockSender, host)
 
 	ctx := context.Background()
-	token := "valid-token-123"
+	token := validToken
 
 	repoErr := errors.New("Database error", http.StatusInternalServerError)
 	mockRepo.On("FindByToken", ctx, token).Return(nil, repoErr)
@@ -382,12 +391,12 @@ func TestSubscriptionService_Confirm_UpdateError(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
 	mockSender := new(mocks.MockEmailSender)
-	host := "http://example.com/"
+	host := testHost
 
 	service := NewSubscriptionService(mockRepo, mockValidator, mockSender, host)
 
 	ctx := context.Background()
-	token := "valid-token-123"
+	token := validToken
 
 	subscription := &models.Subscription{
 		ID:        1,
@@ -418,12 +427,12 @@ func TestSubscriptionService_Unsubscribe_Success(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
 	mockSender := new(mocks.MockEmailSender)
-	host := "http://example.com/"
+	host := testHost
 
 	service := NewSubscriptionService(mockRepo, mockValidator, mockSender, host)
 
 	ctx := context.Background()
-	token := "valid-token-123"
+	token := validToken
 
 	subscription := &models.Subscription{
 		ID:        1,
@@ -447,7 +456,7 @@ func TestSubscriptionService_Unsubscribe_TokenNotFound(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
 	mockSender := new(mocks.MockEmailSender)
-	host := "http://example.com/"
+	host := testHost
 
 	service := NewSubscriptionService(mockRepo, mockValidator, mockSender, host)
 
@@ -472,12 +481,12 @@ func TestSubscriptionService_Unsubscribe_RepositoryError(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
 	mockSender := new(mocks.MockEmailSender)
-	host := "http://example.com/"
+	host := testHost
 
 	service := NewSubscriptionService(mockRepo, mockValidator, mockSender, host)
 
 	ctx := context.Background()
-	token := "valid-token-123"
+	token := validToken
 
 	repoErr := errors.New("Database error", http.StatusInternalServerError)
 	mockRepo.On("FindByToken", ctx, token).Return(nil, repoErr)
@@ -498,12 +507,12 @@ func TestSubscriptionService_Unsubscribe_DeleteError(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
 	mockSender := new(mocks.MockEmailSender)
-	host := "http://example.com/"
+	host := testHost
 
 	service := NewSubscriptionService(mockRepo, mockValidator, mockSender, host)
 
 	ctx := context.Background()
-	token := "valid-token-123"
+	token := validToken
 
 	subscription := &models.Subscription{
 		ID:        1,

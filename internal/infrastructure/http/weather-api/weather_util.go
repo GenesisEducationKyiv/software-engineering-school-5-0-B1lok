@@ -1,6 +1,8 @@
 package weather_api
 
-import "time"
+import (
+	"time"
+)
 
 type Clock interface {
 	Now() time.Time

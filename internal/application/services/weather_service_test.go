@@ -10,11 +10,15 @@ import (
 	"weather-api/pkg/errors"
 )
 
+const (
+	validatedCity = "Berlin"
+)
+
 func TestWeatherService_GetWeather_Success(t *testing.T) {
 	mockRepo := new(mocks.MockWeatherRepository)
 	service := NewWeatherService(mockRepo)
 	ctx := context.Background()
-	city := "Berlin"
+	city := validatedCity
 
 	mockWeather := &models.Weather{
 		Temperature: 20.5,
