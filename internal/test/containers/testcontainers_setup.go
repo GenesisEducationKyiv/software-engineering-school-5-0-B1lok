@@ -26,9 +26,13 @@ func SetupPostgresContainer(ctx context.Context) (*PostgresContainer, error) {
 			"POSTGRES_PASSWORD": "test",
 			"POSTGRES_DB":       "testdb",
 		},
-		WaitingFor: wait.ForSQL("5432/tcp", "postgres", func(host string, port nat.Port) string {
-			return fmt.Sprintf("host=%s port=%s user=test password=test dbname=testdb sslmode=disable", host, port.Port())
-		}).WithStartupTimeout(30 * time.Second),
+		WaitingFor: wait.ForSQL(
+			"5432/tcp", "postgres", func(host string, port nat.Port,
+			) string {
+				return fmt.Sprintf(
+					"host=%s port=%s user=test password=test dbname=testdb sslmode=disable",
+					host, port.Port())
+			}).WithStartupTimeout(30 * time.Second),
 	}
 
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -49,7 +53,9 @@ func SetupPostgresContainer(ctx context.Context) (*PostgresContainer, error) {
 		return nil, err
 	}
 
-	uri := fmt.Sprintf("host=%s user=test password=test dbname=testdb port=%s sslmode=disable", host, port.Port())
+	uri := fmt.Sprintf(
+		"host=%s user=test password=test dbname=testdb port=%s sslmode=disable",
+		host, port.Port())
 
 	db, err := gorm.Open(postgres.Open(uri), &gorm.Config{})
 	if err != nil {

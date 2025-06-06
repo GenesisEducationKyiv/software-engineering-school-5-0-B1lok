@@ -22,17 +22,24 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		log.Fatalf("Application failed to start: %v", err)
+	}
+}
+
+func run() error {
 	cfg, err := config.LoadConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
-	}
 	postgresconnector.RunMigrations(cfg)
 
 	db, err := postgresconnector.ConnectDB(cfg)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		cancel()
+		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
 	weatherRepo := weatherapi.NewWeatherRepository(cfg.WeatherApiKey)
@@ -43,12 +50,15 @@ func main() {
 	txManager := middleware.NewTxManager(db)
 
 	subscriptionRepo := postgresconnector.NewSubscriptionRepository(db)
-	subscriptionService := services.NewSubscriptionService(subscriptionRepo, cityValidatorImpl, sender, cfg.ServerHost)
+	subscriptionService := services.NewSubscriptionService(
+		subscriptionRepo, cityValidatorImpl, sender, cfg.ServerHost)
 	subscriptionController := rest.NewSubscriptionController(subscriptionService)
 
 	jm := scheduled.NewJobManager(ctx)
-	jm.RegisterJob(scheduled.NewHourlyWeatherUpdateJob(weatherRepo, subscriptionRepo, sender, cfg.ServerHost))
-	jm.RegisterJob(scheduled.NewDailyWeatherUpdateJob(weatherRepo, subscriptionRepo, sender, cfg.ServerHost))
+	jm.RegisterJob(scheduled.NewHourlyWeatherUpdateJob(
+		weatherRepo, subscriptionRepo, sender, cfg.ServerHost))
+	jm.RegisterJob(scheduled.NewDailyWeatherUpdateJob(
+		weatherRepo, subscriptionRepo, sender, cfg.ServerHost))
 	go jm.StartScheduler()
 
 	router := gin.Default()
@@ -76,6 +86,7 @@ func main() {
 	serverAddr := fmt.Sprintf(":%s", cfg.ServerPort)
 	log.Printf("Server starting on %s", serverAddr)
 	if err := router.Run(serverAddr); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		return fmt.Errorf("failed to start server: %w", err)
 	}
+	return nil
 }

@@ -17,7 +17,7 @@ import (
 func mockHTTPClient(response string, statusCode int) *http.Client {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(statusCode)
-		w.Write([]byte(response))
+		_, _ = w.Write([]byte(response))
 	}))
 
 	return &http.Client{
@@ -38,7 +38,7 @@ func (MockClock) Now() time.Time {
 
 func loadJSONFile(t *testing.T, filename string) string {
 	path := filepath.Join("testdata", filename)
-	content, err := os.ReadFile(path)
+	content, err := os.ReadFile(path) // #nosec G304 -- filename is controlled and safe
 	require.NoError(t, err, "Failed to read test data file: %s", path)
 	return string(content)
 }

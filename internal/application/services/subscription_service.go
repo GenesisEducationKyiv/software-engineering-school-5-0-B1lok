@@ -18,11 +18,17 @@ type SubscriptionService struct {
 	host       string
 }
 
-func NewSubscriptionService(repository repositories.SubscriptionRepository, validator validator.CityValidator, sender email.Sender, host string) *SubscriptionService {
-	return &SubscriptionService{repository: repository, validator: validator, sender: sender, host: host}
+func NewSubscriptionService(
+	repository repositories.SubscriptionRepository,
+	validator validator.CityValidator,
+	sender email.Sender, host string) *SubscriptionService {
+	return &SubscriptionService{
+		repository: repository, validator: validator, sender: sender, host: host,
+	}
 }
 
-func (s *SubscriptionService) Subscribe(ctx context.Context, subscribeCommand *command.SubscribeCommand) error {
+func (s *SubscriptionService) Subscribe(
+	ctx context.Context, subscribeCommand *command.SubscribeCommand) error {
 	validatedCity, err := s.validator.Validate(subscribeCommand.City)
 	if err != nil {
 		return err
@@ -30,7 +36,9 @@ func (s *SubscriptionService) Subscribe(ctx context.Context, subscribeCommand *c
 	subscribeCommand.City = *validatedCity
 	exists, err := s.repository.ExistByLookup(ctx, subscribeCommand.ToSubscriptionLookup())
 	if err != nil {
-		return errors.Wrap(err, "failed to check if email exists", http.StatusInternalServerError)
+		return errors.Wrap(
+			err, "failed to check if email exists", http.StatusInternalServerError,
+		)
 	}
 	if exists {
 		return errors.New("Email already subscribed", http.StatusConflict)

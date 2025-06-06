@@ -59,7 +59,9 @@ func (suite *SubscriptionControllerTestSuite) SetupSuite() {
 	cityValidatorImpl := stubs.NewCityValidatorStub()
 	sender := stubs.NewSenderStub()
 	subscriptionRepo := postgresconnector.NewSubscriptionRepository(db)
-	subscriptionService := services.NewSubscriptionService(subscriptionRepo, cityValidatorImpl, sender, cfg.ServerHost)
+	subscriptionService := services.NewSubscriptionService(
+		subscriptionRepo, cityValidatorImpl, sender, cfg.ServerHost,
+	)
 	subscriptionController := rest.NewSubscriptionController(subscriptionService)
 	txManager := middleware.NewTxManager(db)
 
@@ -100,7 +102,8 @@ func (suite *SubscriptionControllerTestSuite) TestSubscribe() {
 	suite.Equal(http.StatusOK, resp.Code)
 
 	var count int64
-	err := suite.DB.Model(&models.Subscription{}).Where("email = ?", "test@example.com").Count(&count).Error
+	err := suite.DB.Model(&models.Subscription{}).
+		Where("email = ?", "test@example.com").Count(&count).Error
 	suite.Require().NoError(err)
 	suite.Equal(int64(1), count)
 }
@@ -178,7 +181,9 @@ func (suite *SubscriptionControllerTestSuite) TestConfirmSubscription_InvalidTok
 
 func (suite *SubscriptionControllerTestSuite) TestConfirmSubscription_TokenNotFound() {
 	nonExistentToken := "non-existent-token"
-	req, _ := http.NewRequest("GET", fmt.Sprintf("/api/confirm/%s", nonExistentToken), nil)
+	req, _ := http.NewRequest(
+		"GET", fmt.Sprintf("/api/confirm/%s", nonExistentToken), nil,
+	)
 	resp := httptest.NewRecorder()
 	suite.Router.ServeHTTP(resp, req)
 
@@ -224,7 +229,9 @@ func (suite *SubscriptionControllerTestSuite) TestUnsubscribe_InvalidToken() {
 
 func (suite *SubscriptionControllerTestSuite) TestUnsubscribe_TokenNotFound() {
 	nonExistentToken := "non-existent-token"
-	req, _ := http.NewRequest("GET", fmt.Sprintf("/api/unsubscribe/%s", nonExistentToken), nil)
+	req, _ := http.NewRequest("GET", fmt.Sprintf(
+		"/api/unsubscribe/%s", nonExistentToken), nil,
+	)
 	resp := httptest.NewRecorder()
 	suite.Router.ServeHTTP(resp, req)
 
