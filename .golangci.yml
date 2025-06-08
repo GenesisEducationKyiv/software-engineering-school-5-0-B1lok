@@ -17,6 +17,8 @@ linters:
   settings:
     lll:
       line-length: 100
+    gocyclo:
+      min-complexity: 10
 run:
   timeout: 3m
   tests: true

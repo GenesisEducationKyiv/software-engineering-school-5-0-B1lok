@@ -3,6 +3,7 @@ package validator
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -38,7 +39,11 @@ func (c CityValidator) Validate(city string) (*string, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to connect to weather API", http.StatusServiceUnavailable)
 	}
-	defer resp.Body.Close() //nolint:errcheck
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Println("Error closing response body:", err)
+		}
+	}()
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.New("failed to validate city: non-200 response",
 			http.StatusInternalServerError,

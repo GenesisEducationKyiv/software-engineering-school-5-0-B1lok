@@ -23,7 +23,6 @@ func (s *SubscriptionController) Subscribe(c *gin.Context) {
 		_ = c.Error(errors.New("Invalid input", http.StatusBadRequest))
 		return
 	}
-	c.Request.Context()
 
 	err := s.service.Subscribe(c.Request.Context(), req.ToSubscribeCommand())
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -46,7 +47,11 @@ func (r *WeatherRepository) GetWeather(ctx context.Context, city string) (*model
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close() //nolint:errcheck
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Println("Error closing response body:", err)
+		}
+	}()
 
 	if err := r.handleAPIResponse(resp); err != nil {
 		return nil, err
@@ -72,7 +77,11 @@ func (r *WeatherRepository) GetDailyForecast(
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close() //nolint:errcheck
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Println("Error closing response body:", err)
+		}
+	}()
 
 	if err := r.handleAPIResponse(resp); err != nil {
 		return nil, err
@@ -97,7 +106,11 @@ func (r *WeatherRepository) GetHourlyForecast(
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close() //nolint:errcheck
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Println("Error closing response body:", err)
+		}
+	}()
 
 	if err := r.handleAPIResponse(resp); err != nil {
 		return nil, err
