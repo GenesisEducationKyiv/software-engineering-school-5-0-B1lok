@@ -3,9 +3,10 @@ package email
 import (
 	"bytes"
 	"fmt"
-	"gopkg.in/gomail.v2"
 	"html/template"
 	"net/http"
+
+	"gopkg.in/gomail.v2"
 	"weather-api/internal/application/email"
 	"weather-api/pkg/errors"
 )

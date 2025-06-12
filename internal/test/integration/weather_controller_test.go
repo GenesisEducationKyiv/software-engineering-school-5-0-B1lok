@@ -2,13 +2,14 @@ package integration
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/gin-gonic/gin"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/stretchr/testify/suite"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 	"weather-api/internal/application/services"
 	"weather-api/internal/interface/api/rest"
 	"weather-api/internal/test/stubs"

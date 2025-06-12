@@ -1,9 +1,10 @@
 package rest
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 	"weather-api/internal/application/interfaces"
 	"weather-api/internal/interface/api/rest/dto/request"
 	"weather-api/pkg/errors"

@@ -4,9 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/suite"
-	"gorm.io/gorm"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +11,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/suite"
+	"gorm.io/gorm"
 	"weather-api/internal/application/services"
 	"weather-api/internal/config"
 	"weather-api/internal/domain/models"
@@ -108,6 +109,7 @@ func (suite *SubscriptionControllerTestSuite) TestSubscribe() {
 	suite.Require().NoError(err)
 	suite.Equal(int64(1), count)
 }
+
 func (suite *SubscriptionControllerTestSuite) TestSubscribe_InvalidInput() {
 	formData := "email=test@example.com"
 	body := strings.NewReader(formData)

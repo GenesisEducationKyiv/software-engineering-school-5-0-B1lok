@@ -3,12 +3,13 @@ package containers
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/docker/go-connections/nat"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"time"
 )
 
 type PostgresContainer struct {

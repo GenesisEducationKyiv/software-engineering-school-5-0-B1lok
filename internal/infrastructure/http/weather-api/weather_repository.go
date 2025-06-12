@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
 	"weather-api/internal/domain/models"
 	"weather-api/pkg/errors"
 )
@@ -66,7 +67,8 @@ func (r *WeatherRepository) GetWeather(ctx context.Context, city string) (*model
 }
 
 func (r *WeatherRepository) GetDailyForecast(
-	ctx context.Context, city string) (*models.WeatherDaily, error) {
+	ctx context.Context, city string,
+) (*models.WeatherDaily, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s&days=1",
 		baseUrl,
 		forecastEndpoint,
@@ -95,7 +97,8 @@ func (r *WeatherRepository) GetDailyForecast(
 }
 
 func (r *WeatherRepository) GetHourlyForecast(
-	ctx context.Context, city string) (*models.WeatherHourly, error) {
+	ctx context.Context, city string,
+) (*models.WeatherHourly, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s&days=1",
 		baseUrl,
 		forecastEndpoint,
@@ -122,8 +125,10 @@ func (r *WeatherRepository) GetHourlyForecast(
 	}
 	return ToWeatherHourly(&apiResponse, r.clock.Now()), nil
 }
+
 func (r *WeatherRepository) requestWeatherAPI(
-	ctx context.Context, endpoint string) (*http.Response, error) {
+	ctx context.Context, endpoint string,
+) (*http.Response, error) {
 	resp, err := r.client.Get(endpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to connect to weather API", http.StatusServiceUnavailable)

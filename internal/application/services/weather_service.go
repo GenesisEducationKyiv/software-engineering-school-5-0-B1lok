@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+
 	"weather-api/internal/application/mapper"
 	"weather-api/internal/application/query"
 	"weather-api/internal/domain/repositories"
@@ -16,7 +17,8 @@ func NewWeatherService(weatherRepository repositories.WeatherRepository) *Weathe
 }
 
 func (s *WeatherService) GetWeather(
-	ctx context.Context, city string) (*query.WeatherQueryResult, error) {
+	ctx context.Context, city string,
+) (*query.WeatherQueryResult, error) {
 	weather, err := s.weatherRepository.GetWeather(ctx, city)
 	if err != nil {
 		return nil, err

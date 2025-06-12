@@ -2,6 +2,7 @@ package weather_api
 
 import (
 	"time"
+
 	"weather-api/internal/domain/models"
 )
 

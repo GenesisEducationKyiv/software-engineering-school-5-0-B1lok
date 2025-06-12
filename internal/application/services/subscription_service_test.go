@@ -2,10 +2,11 @@ package services
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"net/http"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"weather-api/internal/application/command"
 	"weather-api/internal/domain/models"
 	"weather-api/internal/test/mocks"

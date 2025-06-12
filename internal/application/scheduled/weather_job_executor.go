@@ -5,6 +5,7 @@ import (
 	"log"
 	"sync"
 	"time"
+
 	"weather-api/internal/application/email"
 	"weather-api/internal/domain/models"
 	"weather-api/internal/domain/repositories"
@@ -89,7 +90,8 @@ func (e *WeatherJobExecutor[T, E]) Execute(ctx context.Context) error {
 }
 
 func (e *WeatherJobExecutor[T, E]) startWorkers(
-	groups []*models.GroupedSubscription) (chan E, chan error, *sync.WaitGroup) {
+	groups []*models.GroupedSubscription,
+) (chan E, chan error, *sync.WaitGroup) {
 	totalSubscriptions := 0
 	for _, group := range groups {
 		totalSubscriptions += len(group.Subscriptions)
@@ -108,7 +110,8 @@ func (e *WeatherJobExecutor[T, E]) startWorkers(
 }
 
 func (e *WeatherJobExecutor[T, E]) dispatchTasks(
-	ctx context.Context, groups []*models.GroupedSubscription, taskChan chan<- E) error {
+	ctx context.Context, groups []*models.GroupedSubscription, taskChan chan<- E,
+) error {
 	for _, group := range groups {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -131,7 +134,8 @@ func (e *WeatherJobExecutor[T, E]) dispatchTasks(
 }
 
 func (e *WeatherJobExecutor[T, E]) collectErrors(
-	ctx context.Context, errChan chan error, wg *sync.WaitGroup) []error {
+	ctx context.Context, errChan chan error, wg *sync.WaitGroup,
+) []error {
 	errorCollector := make(chan []error, 1)
 
 	go func() {

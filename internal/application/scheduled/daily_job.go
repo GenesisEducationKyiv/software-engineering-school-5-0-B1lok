@@ -3,6 +3,7 @@ package scheduled
 import (
 	"context"
 	"fmt"
+
 	"weather-api/internal/application/email"
 	"weather-api/internal/domain/models"
 	"weather-api/internal/domain/repositories"
@@ -33,7 +34,8 @@ func NewDailyWeatherUpdateJob(
 	}
 
 	createTaskFunc := func(subscription *models.Subscription,
-		weather *models.WeatherDaily) *DailyEmailTask {
+		weather *models.WeatherDaily,
+	) *DailyEmailTask {
 		return &DailyEmailTask{
 			subscription: subscription,
 			weatherDaily: weather,
@@ -78,7 +80,8 @@ func (d *DailyWeatherUpdateJob) Run(ctx context.Context) error {
 func toWeatherDailyEmail(
 	subscription *models.Subscription,
 	weatherDaily *models.WeatherDaily,
-	host string) *email.WeatherDailyEmail {
+	host string,
+) *email.WeatherDailyEmail {
 	return &email.WeatherDailyEmail{
 		To:             subscription.Email,
 		Frequency:      string(subscription.Frequency),

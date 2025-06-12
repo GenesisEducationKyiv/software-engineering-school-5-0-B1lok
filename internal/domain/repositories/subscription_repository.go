@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+
 	"weather-api/internal/domain/models"
 )
 

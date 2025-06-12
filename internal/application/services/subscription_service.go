@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"net/http"
+
 	"weather-api/internal/application/command"
 	"weather-api/internal/application/email"
 	"weather-api/internal/domain/models"
@@ -21,14 +22,16 @@ type SubscriptionService struct {
 func NewSubscriptionService(
 	repository repositories.SubscriptionRepository,
 	validator validator.CityValidator,
-	sender email.Sender, host string) *SubscriptionService {
+	sender email.Sender, host string,
+) *SubscriptionService {
 	return &SubscriptionService{
 		repository: repository, validator: validator, sender: sender, host: host,
 	}
 }
 
 func (s *SubscriptionService) Subscribe(
-	ctx context.Context, subscribeCommand *command.SubscribeCommand) error {
+	ctx context.Context, subscribeCommand *command.SubscribeCommand,
+) error {
 	validatedCity, err := s.validator.Validate(subscribeCommand.City)
 	if err != nil {
 		return err

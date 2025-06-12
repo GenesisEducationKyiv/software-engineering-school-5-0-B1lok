@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
 	"weather-api/pkg/errors"
 )
 

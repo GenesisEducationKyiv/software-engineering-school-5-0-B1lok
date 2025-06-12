@@ -3,8 +3,9 @@ package postgres
 import (
 	"context"
 	"errors"
-	"gorm.io/gorm"
 	"net/http"
+
+	"gorm.io/gorm"
 	"weather-api/internal/domain/models"
 	customErrors "weather-api/pkg/errors"
 	"weather-api/pkg/middleware"
@@ -19,7 +20,8 @@ func NewSubscriptionRepository(db *gorm.DB) *SubscriptionRepository {
 }
 
 func (r *SubscriptionRepository) Create(
-	ctx context.Context, subscription *models.Subscription) (*models.Subscription, error) {
+	ctx context.Context, subscription *models.Subscription,
+) (*models.Subscription, error) {
 	entity := ToEntity(subscription)
 	db := r.getDB(ctx)
 
@@ -39,7 +41,8 @@ func (r *SubscriptionRepository) Create(
 }
 
 func (r *SubscriptionRepository) ExistByLookup(
-	ctx context.Context, lookup *models.SubscriptionLookup) (bool, error) {
+	ctx context.Context, lookup *models.SubscriptionLookup,
+) (bool, error) {
 	var count int64
 	db := r.getDB(ctx)
 	err := db.
@@ -55,7 +58,8 @@ func (r *SubscriptionRepository) ExistByLookup(
 }
 
 func (r *SubscriptionRepository) Update(
-	ctx context.Context, subscription *models.Subscription) (*models.Subscription, error) {
+	ctx context.Context, subscription *models.Subscription,
+) (*models.Subscription, error) {
 	entity := ToEntity(subscription)
 	db := r.getDB(ctx)
 	result := db.Save(entity)
@@ -89,7 +93,8 @@ func (r *SubscriptionRepository) Delete(ctx context.Context, id uint) error {
 }
 
 func (r *SubscriptionRepository) FindByToken(
-	ctx context.Context, token string) (*models.Subscription, error) {
+	ctx context.Context, token string,
+) (*models.Subscription, error) {
 	var entity SubscriptionEntity
 	db := r.getDB(ctx)
 	result := db.Where("token = ?", token).First(&entity)
@@ -108,14 +113,14 @@ func (r *SubscriptionRepository) FindByToken(
 }
 
 func (r *SubscriptionRepository) FindGroupedSubscriptions(
-	ctx context.Context, frequency *models.Frequency) ([]*models.GroupedSubscription, error) {
+	ctx context.Context, frequency *models.Frequency,
+) ([]*models.GroupedSubscription, error) {
 	var subscriptions []SubscriptionEntity
 	db := r.getDB(ctx)
 
 	err := db.
 		Where("confirmed = ? AND frequency = ?", true, frequency).
 		Find(&subscriptions).Error
-
 	if err != nil {
 		return nil, customErrors.Wrap(
 			err, "failed to find confirmed subscriptions", http.StatusInternalServerError,

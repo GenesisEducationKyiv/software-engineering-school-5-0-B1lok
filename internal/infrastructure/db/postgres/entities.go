@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"time"
+
 	"weather-api/internal/domain/models"
 )
 

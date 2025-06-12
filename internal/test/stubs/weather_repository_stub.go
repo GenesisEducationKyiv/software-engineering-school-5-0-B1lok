@@ -3,6 +3,7 @@ package stubs
 import (
 	"context"
 	"net/http"
+
 	"weather-api/internal/domain/models"
 	"weather-api/pkg/errors"
 )
@@ -22,7 +23,8 @@ func NewWeatherRepositoryStub() *WeatherRepositoryStub {
 }
 
 func (s *WeatherRepositoryStub) GetWeather(ctx context.Context,
-	city string) (*models.Weather, error) {
+	city string,
+) (*models.Weather, error) {
 	if s.GetWeatherFn != nil {
 		return s.GetWeatherFn(ctx, city)
 	}
@@ -37,7 +39,8 @@ func (s *WeatherRepositoryStub) GetWeather(ctx context.Context,
 }
 
 func (s *WeatherRepositoryStub) GetDailyForecast(ctx context.Context,
-	city string) (*models.WeatherDaily, error) {
+	city string,
+) (*models.WeatherDaily, error) {
 	if s.GetDailyForecastFn != nil {
 		return s.GetDailyForecastFn(ctx, city)
 	}
@@ -57,7 +60,8 @@ func (s *WeatherRepositoryStub) GetDailyForecast(ctx context.Context,
 }
 
 func (s *WeatherRepositoryStub) GetHourlyForecast(ctx context.Context,
-	city string) (*models.WeatherHourly, error) {
+	city string,
+) (*models.WeatherHourly, error) {
 	if s.GetHourlyForecastFn != nil {
 		return s.GetHourlyForecastFn(ctx, city)
 	}

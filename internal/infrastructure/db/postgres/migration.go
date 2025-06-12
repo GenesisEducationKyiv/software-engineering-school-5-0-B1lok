@@ -2,9 +2,10 @@ package postgres
 
 import (
 	"fmt"
-	"github.com/golang-migrate/migrate/v4"
 	"log"
 	"net/url"
+
+	"github.com/golang-migrate/migrate/v4"
 	"weather-api/internal/config"
 )
 
