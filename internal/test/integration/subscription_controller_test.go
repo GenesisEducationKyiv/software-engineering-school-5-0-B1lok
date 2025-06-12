@@ -12,9 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/suite"
-	"gorm.io/gorm"
 	"weather-api/internal/application/services"
 	"weather-api/internal/config"
 	"weather-api/internal/domain/models"
@@ -23,6 +20,10 @@ import (
 	"weather-api/internal/test/containers"
 	"weather-api/internal/test/stubs"
 	"weather-api/pkg/middleware"
+
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/suite"
+	"gorm.io/gorm"
 )
 
 type SubscriptionControllerTestSuite struct {

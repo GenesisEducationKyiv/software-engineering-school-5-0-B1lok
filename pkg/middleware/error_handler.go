@@ -4,8 +4,9 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"weather-api/pkg/errors"
+
+	"github.com/gin-gonic/gin"
 )
 
 func ErrorHandler() gin.HandlerFunc {

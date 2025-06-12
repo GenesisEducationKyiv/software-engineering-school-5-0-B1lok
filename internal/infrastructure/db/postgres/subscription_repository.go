@@ -5,10 +5,11 @@ import (
 	"errors"
 	"net/http"
 
-	"gorm.io/gorm"
 	"weather-api/internal/domain/models"
 	customErrors "weather-api/pkg/errors"
 	"weather-api/pkg/middleware"
+
+	"gorm.io/gorm"
 )
 
 type SubscriptionRepository struct {

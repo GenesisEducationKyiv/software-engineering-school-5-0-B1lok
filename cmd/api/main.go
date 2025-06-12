@@ -8,10 +8,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/gin-gonic/gin"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"gorm.io/gorm"
 	"weather-api/internal/application/scheduled"
 	"weather-api/internal/application/services"
 	"weather-api/internal/config"
@@ -21,6 +17,11 @@ import (
 	weatherapi "weather-api/internal/infrastructure/http/weather-api"
 	"weather-api/internal/interface/api/rest"
 	"weather-api/pkg/middleware"
+
+	"github.com/gin-gonic/gin"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"gorm.io/gorm"
 )
 
 type Components struct {

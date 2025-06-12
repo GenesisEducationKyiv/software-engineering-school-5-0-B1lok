@@ -6,9 +6,10 @@ import (
 	"html/template"
 	"net/http"
 
-	"gopkg.in/gomail.v2"
 	"weather-api/internal/application/email"
 	"weather-api/pkg/errors"
+
+	"gopkg.in/gomail.v2"
 )
 
 type EmailConfig struct {

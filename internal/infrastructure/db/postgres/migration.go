@@ -5,8 +5,9 @@ import (
 	"log"
 	"net/url"
 
-	"github.com/golang-migrate/migrate/v4"
 	"weather-api/internal/config"
+
+	"github.com/golang-migrate/migrate/v4"
 )
 
 func RunMigrations(cfg config.Config) {

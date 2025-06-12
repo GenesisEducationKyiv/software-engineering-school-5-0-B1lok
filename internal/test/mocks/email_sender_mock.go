@@ -1,8 +1,9 @@
 package mocks
 
 import (
-	"github.com/stretchr/testify/mock"
 	"weather-api/internal/application/email"
+
+	"github.com/stretchr/testify/mock"
 )
 
 type MockEmailSender struct {

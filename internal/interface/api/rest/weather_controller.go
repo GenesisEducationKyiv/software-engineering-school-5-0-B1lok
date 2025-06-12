@@ -3,10 +3,11 @@ package rest
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"weather-api/internal/application/interfaces"
 	"weather-api/internal/interface/api/rest/dto/mapper"
 	"weather-api/pkg/errors"
+
+	"github.com/gin-gonic/gin"
 )
 
 type WeatherController struct {

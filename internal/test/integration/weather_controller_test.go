@@ -6,14 +6,15 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gin-gonic/gin"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/stretchr/testify/suite"
 	"weather-api/internal/application/services"
 	"weather-api/internal/interface/api/rest"
 	"weather-api/internal/test/stubs"
 	"weather-api/pkg/middleware"
+
+	"github.com/gin-gonic/gin"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/stretchr/testify/suite"
 )
 
 type WeatherControllerTestSuite struct {
