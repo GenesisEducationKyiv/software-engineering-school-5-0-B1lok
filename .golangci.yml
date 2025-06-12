@@ -24,6 +24,10 @@ formatters:
   enable:
     - gofmt
     - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - weather-api
 run:
   timeout: 3m
   tests: true
