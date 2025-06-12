@@ -56,7 +56,7 @@ func run() error {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	components := setupComponents(cfg, ctx, db)
+	components := setupComponents(ctx, cfg, db)
 	setupScheduledJobs(components, cfg)
 
 	router := createRouter(components)
@@ -74,7 +74,7 @@ func run() error {
 	return nil
 }
 
-func setupComponents(cfg config.Config, ctx context.Context, db *gorm.DB) *Components {
+func setupComponents(ctx context.Context, cfg config.Config, db *gorm.DB) *Components {
 	weatherRepo := weatherapi.NewWeatherRepository(cfg.WeatherApiKey)
 	weatherService := services.NewWeatherService(weatherRepo)
 	weatherController := rest.NewWeatherController(weatherService)
