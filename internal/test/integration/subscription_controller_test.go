@@ -93,7 +93,8 @@ func (suite *SubscriptionControllerTestSuite) TestSubscribe() {
 	formData := "email=test@example.com&city=London&frequency=daily"
 	body := strings.NewReader(formData)
 
-	req, _ := http.NewRequest("POST", "/api/subscribe", body)
+	req, reqErr := http.NewRequest(http.MethodPost, "/api/subscribe", body)
+	suite.Require().NoError(reqErr)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp := httptest.NewRecorder()
@@ -111,7 +112,8 @@ func (suite *SubscriptionControllerTestSuite) TestSubscribe_InvalidInput() {
 	formData := "email=test@example.com"
 	body := strings.NewReader(formData)
 
-	req, _ := http.NewRequest("POST", "/api/subscribe", body)
+	req, reqErr := http.NewRequest(http.MethodPost, "/api/subscribe", body)
+	suite.Require().NoError(reqErr)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp := httptest.NewRecorder()
@@ -125,7 +127,8 @@ func (suite *SubscriptionControllerTestSuite) TestSubscribe_EmailAlreadySubscrib
 	formData := "email=test@example.com&city=London&frequency=daily"
 	body := strings.NewReader(formData)
 
-	req1, _ := http.NewRequest("POST", "/api/subscribe", body)
+	req1, reqErr := http.NewRequest(http.MethodPost, "/api/subscribe", body)
+	suite.Require().NoError(reqErr)
 	req1.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp1 := httptest.NewRecorder()
@@ -133,7 +136,8 @@ func (suite *SubscriptionControllerTestSuite) TestSubscribe_EmailAlreadySubscrib
 	suite.Equal(http.StatusOK, resp1.Code)
 
 	bodyDuplicate := strings.NewReader(formData)
-	req2, _ := http.NewRequest("POST", "/api/subscribe", bodyDuplicate)
+	req2, req2Err := http.NewRequest(http.MethodPost, "/api/subscribe", bodyDuplicate)
+	suite.Require().NoError(req2Err)
 	req2.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp2 := httptest.NewRecorder()
@@ -153,7 +157,8 @@ func (suite *SubscriptionControllerTestSuite) TestConfirmSubscription() {
 		Confirmed: false,
 	})
 
-	req, _ := http.NewRequest("GET", fmt.Sprintf("/api/confirm/%s", token), nil)
+	req, reqErr := http.NewRequest(http.MethodGet, fmt.Sprintf("/api/confirm/%s", token), nil)
+	suite.Require().NoError(reqErr)
 	resp := httptest.NewRecorder()
 	suite.Router.ServeHTTP(resp, req)
 
@@ -171,7 +176,8 @@ func (suite *SubscriptionControllerTestSuite) TestConfirmSubscription() {
 }
 
 func (suite *SubscriptionControllerTestSuite) TestConfirmSubscription_InvalidToken() {
-	req, _ := http.NewRequest("GET", "/api/confirm/ ", nil)
+	req, reqErr := http.NewRequest(http.MethodGet, "/api/confirm/ ", nil)
+	suite.Require().NoError(reqErr)
 	resp := httptest.NewRecorder()
 	suite.Router.ServeHTTP(resp, req)
 
@@ -181,9 +187,10 @@ func (suite *SubscriptionControllerTestSuite) TestConfirmSubscription_InvalidTok
 
 func (suite *SubscriptionControllerTestSuite) TestConfirmSubscription_TokenNotFound() {
 	nonExistentToken := "non-existent-token"
-	req, _ := http.NewRequest(
-		"GET", fmt.Sprintf("/api/confirm/%s", nonExistentToken), nil,
+	req, reqErr := http.NewRequest(
+		http.MethodGet, fmt.Sprintf("/api/confirm/%s", nonExistentToken), nil,
 	)
+	suite.Require().NoError(reqErr)
 	resp := httptest.NewRecorder()
 	suite.Router.ServeHTTP(resp, req)
 
@@ -201,7 +208,8 @@ func (suite *SubscriptionControllerTestSuite) TestUnsubscribe() {
 		Confirmed: true,
 	})
 
-	req, _ := http.NewRequest("GET", fmt.Sprintf("/api/unsubscribe/%s", token), nil)
+	req, reqErr := http.NewRequest(http.MethodGet, fmt.Sprintf("/api/unsubscribe/%s", token), nil)
+	suite.Require().NoError(reqErr)
 	resp := httptest.NewRecorder()
 	suite.Router.ServeHTTP(resp, req)
 
@@ -219,7 +227,8 @@ func (suite *SubscriptionControllerTestSuite) TestUnsubscribe() {
 }
 
 func (suite *SubscriptionControllerTestSuite) TestUnsubscribe_InvalidToken() {
-	req, _ := http.NewRequest("GET", "/api/unsubscribe/ ", nil)
+	req, reqErr := http.NewRequest(http.MethodGet, "/api/unsubscribe/ ", nil)
+	suite.Require().NoError(reqErr)
 	resp := httptest.NewRecorder()
 	suite.Router.ServeHTTP(resp, req)
 
@@ -229,9 +238,10 @@ func (suite *SubscriptionControllerTestSuite) TestUnsubscribe_InvalidToken() {
 
 func (suite *SubscriptionControllerTestSuite) TestUnsubscribe_TokenNotFound() {
 	nonExistentToken := "non-existent-token"
-	req, _ := http.NewRequest("GET", fmt.Sprintf(
+	req, reqErr := http.NewRequest(http.MethodGet, fmt.Sprintf(
 		"/api/unsubscribe/%s", nonExistentToken), nil,
 	)
+	suite.Require().NoError(reqErr)
 	resp := httptest.NewRecorder()
 	suite.Router.ServeHTTP(resp, req)
 

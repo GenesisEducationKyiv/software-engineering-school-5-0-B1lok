@@ -34,7 +34,8 @@ func (suite *WeatherControllerTestSuite) SetupSuite() {
 }
 
 func (suite *WeatherControllerTestSuite) TestGetWeather() {
-	req, _ := http.NewRequest("GET", "/api/weather?city=London", nil)
+	req, reqErr := http.NewRequest(http.MethodGet, "/api/weather?city=London", nil)
+	suite.Require().NoError(reqErr)
 	resp := httptest.NewRecorder()
 
 	suite.Router.ServeHTTP(resp, req)
@@ -50,7 +51,8 @@ func (suite *WeatherControllerTestSuite) TestGetWeather() {
 }
 
 func (suite *WeatherControllerTestSuite) TestGetWeatherInvalidCity() {
-	req, _ := http.NewRequest("GET", "/api/weather?city=InvalidCity", nil)
+	req, reqErr := http.NewRequest(http.MethodGet, "/api/weather?city=InvalidCity", nil)
+	suite.Require().NoError(reqErr)
 	resp := httptest.NewRecorder()
 
 	suite.Router.ServeHTTP(resp, req)
@@ -59,7 +61,8 @@ func (suite *WeatherControllerTestSuite) TestGetWeatherInvalidCity() {
 }
 
 func (suite *WeatherControllerTestSuite) TestGetWeatherInvalidQueryParam() {
-	req, _ := http.NewRequest("GET", "/api/weather?city=", nil)
+	req, reqErr := http.NewRequest(http.MethodGet, "/api/weather?city=", nil)
+	suite.Require().NoError(reqErr)
 	resp := httptest.NewRecorder()
 
 	suite.Router.ServeHTTP(resp, req)

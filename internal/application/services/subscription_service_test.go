@@ -32,7 +32,6 @@ func TestSubscriptionService_Subscribe_Success(t *testing.T) {
 		Frequency: "daily",
 	}
 
-	validatedCity := validatedCity
 	mockValidator.On("Validate", "berlin").Return(validatedCity, nil)
 
 	lookup := &models.SubscriptionLookup{
@@ -104,7 +103,6 @@ func TestSubscriptionService_Subscribe_AlreadyExists(t *testing.T) {
 		Frequency: "daily",
 	}
 
-	validatedCity := validatedCity
 	mockValidator.On("Validate", "berlin").Return(validatedCity, nil)
 
 	lookup := &models.SubscriptionLookup{
@@ -143,7 +141,6 @@ func TestSubscriptionService_Subscribe_RepositoryError(t *testing.T) {
 		Frequency: "daily",
 	}
 
-	validatedCity := validatedCity
 	mockValidator.On("Validate", "berlin").Return(validatedCity, nil)
 
 	lookup := &models.SubscriptionLookup{
@@ -183,7 +180,6 @@ func TestSubscriptionService_Subscribe_InvalidFrequency(t *testing.T) {
 		Frequency: "invalid",
 	}
 
-	validatedCity := validatedCity
 	mockValidator.On("Validate", "berlin").Return(validatedCity, nil)
 
 	validatedCmd := &command.SubscribeCommand{
@@ -223,7 +219,6 @@ func TestSubscriptionService_Subscribe_CreateError(t *testing.T) {
 		Frequency: "daily",
 	}
 
-	validatedCity := validatedCity
 	mockValidator.On("Validate", "berlin").Return(validatedCity, nil)
 
 	lookup := &models.SubscriptionLookup{
@@ -264,7 +259,6 @@ func TestSubscriptionService_Subscribe_EmailError(t *testing.T) {
 		Frequency: "daily",
 	}
 
-	validatedCity := validatedCity
 	mockValidator.On("Validate", "berlin").Return(validatedCity, nil)
 
 	lookup := &models.SubscriptionLookup{
