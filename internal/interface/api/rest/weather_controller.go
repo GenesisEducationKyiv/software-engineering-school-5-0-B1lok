@@ -23,12 +23,12 @@ func NewWeatherController(service interfaces.WeatherService) *WeatherController 
 func (h *WeatherController) GetWeather(c *gin.Context) {
 	city := c.Query("city")
 	if city == "" {
-		_ = c.Error(errors.New("Invalid request", http.StatusBadRequest))
+		c.Error(errors.New("Invalid request", http.StatusBadRequest)) //nolint:errcheck
 		return
 	}
 	weather, err := h.service.GetWeather(c.Request.Context(), city)
 	if err != nil {
-		_ = c.Error(err)
+		c.Error(err) //nolint:errcheck
 		return
 	}
 	c.JSON(http.StatusOK, mapper.ToWeatherResponse(weather.Result))

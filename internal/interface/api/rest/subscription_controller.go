@@ -22,13 +22,13 @@ func NewSubscriptionController(service interfaces.SubscriptionService) *Subscrip
 func (s *SubscriptionController) Subscribe(c *gin.Context) {
 	var req request.SubscribeRequest
 	if err := c.ShouldBind(&req); err != nil {
-		_ = c.Error(errors.New("Invalid input", http.StatusBadRequest))
+		c.Error(errors.New("Invalid input", http.StatusBadRequest)) //nolint:errcheck
 		return
 	}
 
 	err := s.service.Subscribe(c.Request.Context(), req.ToSubscribeCommand())
 	if err != nil {
-		_ = c.Error(err)
+		c.Error(err) //nolint:errcheck
 		return
 	}
 
@@ -38,13 +38,13 @@ func (s *SubscriptionController) Subscribe(c *gin.Context) {
 func (s *SubscriptionController) Confirm(c *gin.Context) {
 	token := c.Param("token")
 	if strings.TrimSpace(token) == "" {
-		_ = c.Error(errors.New("Invalid token", http.StatusBadRequest))
+		c.Error(errors.New("Invalid token", http.StatusBadRequest)) //nolint:errcheck
 		return
 	}
 
 	err := s.service.Confirm(c.Request.Context(), token)
 	if err != nil {
-		_ = c.Error(err)
+		c.Error(err) //nolint:errcheck
 		return
 	}
 
@@ -54,13 +54,13 @@ func (s *SubscriptionController) Confirm(c *gin.Context) {
 func (s *SubscriptionController) Unsubscribe(c *gin.Context) {
 	token := c.Param("token")
 	if strings.TrimSpace(token) == "" {
-		_ = c.Error(errors.New("Invalid token", http.StatusBadRequest))
+		c.Error(errors.New("Invalid token", http.StatusBadRequest)) //nolint:errcheck
 		return
 	}
 
 	err := s.service.Unsubscribe(c.Request.Context(), token)
 	if err != nil {
-		_ = c.Error(err)
+		c.Error(err) //nolint:errcheck
 		return
 	}
 
