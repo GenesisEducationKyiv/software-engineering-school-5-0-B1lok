@@ -23,7 +23,7 @@ func NewSubscriptionRepository(db *gorm.DB) *SubscriptionRepository {
 func (r *SubscriptionRepository) Create(
 	ctx context.Context, subscription *models.Subscription,
 ) (*models.Subscription, error) {
-	entity := ToEntity(subscription)
+	entity := toEntity(subscription)
 	db := r.getDB(ctx)
 
 	if err := db.Create(entity).Error; err != nil {
@@ -32,7 +32,7 @@ func (r *SubscriptionRepository) Create(
 		)
 	}
 
-	saved, err := ToDomain(entity)
+	saved, err := toDomain(entity)
 	if err != nil {
 		return nil, customErrors.Wrap(
 			err, "failed to map subscription entity", http.StatusInternalServerError,
@@ -61,7 +61,7 @@ func (r *SubscriptionRepository) ExistByLookup(
 func (r *SubscriptionRepository) Update(
 	ctx context.Context, subscription *models.Subscription,
 ) (*models.Subscription, error) {
-	entity := ToEntity(subscription)
+	entity := toEntity(subscription)
 	db := r.getDB(ctx)
 	result := db.Save(entity)
 	if result.Error != nil {
@@ -74,7 +74,7 @@ func (r *SubscriptionRepository) Update(
 		return nil, customErrors.New("subscription not found", http.StatusNotFound)
 	}
 
-	return ToDomain(entity)
+	return toDomain(entity)
 }
 
 func (r *SubscriptionRepository) Delete(ctx context.Context, id uint) error {
@@ -110,7 +110,7 @@ func (r *SubscriptionRepository) FindByToken(
 		)
 	}
 
-	return ToDomain(&entity)
+	return toDomain(&entity)
 }
 
 func (r *SubscriptionRepository) FindGroupedSubscriptions(
@@ -135,7 +135,7 @@ func (r *SubscriptionRepository) FindGroupedSubscriptions(
 
 	grouped := make([]*models.GroupedSubscription, 0, len(subscriptionMap))
 	for city, subscriptions := range subscriptionMap {
-		domainSubs, err := ToDomainList(subscriptions)
+		domainSubs, err := toDomainList(subscriptions)
 		if err != nil {
 			return nil, err
 		}

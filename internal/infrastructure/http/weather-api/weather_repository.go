@@ -63,7 +63,7 @@ func (r *WeatherRepository) GetWeather(ctx context.Context, city string) (*model
 			err, "failed to parse weather data", http.StatusInternalServerError,
 		)
 	}
-	return ToWeather(&apiResponse), nil
+	return toWeather(&apiResponse), nil
 }
 
 func (r *WeatherRepository) GetDailyForecast(
@@ -93,7 +93,7 @@ func (r *WeatherRepository) GetDailyForecast(
 	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
 		return nil, errors.Wrap(err, "failed to parse weather data", http.StatusInternalServerError)
 	}
-	return ToWeatherDaily(&apiResponse), nil
+	return toWeatherDaily(&apiResponse), nil
 }
 
 func (r *WeatherRepository) GetHourlyForecast(
@@ -123,7 +123,7 @@ func (r *WeatherRepository) GetHourlyForecast(
 	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
 		return nil, errors.Wrap(err, "failed to parse weather data", http.StatusInternalServerError)
 	}
-	return ToWeatherHourly(&apiResponse, r.clock.Now()), nil
+	return toWeatherHourly(&apiResponse, r.clock.Now()), nil
 }
 
 func (r *WeatherRepository) requestWeatherAPI(

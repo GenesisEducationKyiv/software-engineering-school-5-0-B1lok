@@ -121,9 +121,9 @@ func TestDirectMapping(t *testing.T) {
 	err = json.Unmarshal([]byte(hourlyJSON), &hourlyResponse)
 	require.NoError(t, err)
 
-	weather := ToWeather(&currentResponse)
-	dailyForecast := ToWeatherDaily(&dailyResponse)
-	hourlyForecast := ToWeatherHourly(&hourlyResponse, MockClock{}.Now())
+	weather := toWeather(&currentResponse)
+	dailyForecast := toWeatherDaily(&dailyResponse)
+	hourlyForecast := toWeatherHourly(&hourlyResponse, MockClock{}.Now())
 
 	assert.NotNil(t, weather)
 	assert.NotNil(t, dailyForecast)
