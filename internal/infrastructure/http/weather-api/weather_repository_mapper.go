@@ -2,10 +2,11 @@ package weather_api
 
 import (
 	"time"
+
 	"weather-api/internal/domain/models"
 )
 
-func ToWeather(weatherRepositoryResponse *WeatherRepositoryResponse) *models.Weather {
+func toWeather(weatherRepositoryResponse *WeatherRepositoryResponse) *models.Weather {
 	return &models.Weather{
 		Temperature: weatherRepositoryResponse.Current.TempC,
 		Humidity:    weatherRepositoryResponse.Current.Humidity,
@@ -13,7 +14,7 @@ func ToWeather(weatherRepositoryResponse *WeatherRepositoryResponse) *models.Wea
 	}
 }
 
-func ToWeatherDaily(response *WeatherDailyResponse) *models.WeatherDaily {
+func toWeatherDaily(response *WeatherDailyResponse) *models.WeatherDaily {
 	first := response.Forecast.Forecastday[0]
 
 	return &models.WeatherDaily{
@@ -31,7 +32,7 @@ func ToWeatherDaily(response *WeatherDailyResponse) *models.WeatherDaily {
 	}
 }
 
-func ToWeatherHourly(response *WeatherHourlyResponse, targetTime time.Time) *models.WeatherHourly {
+func toWeatherHourly(response *WeatherHourlyResponse, targetTime time.Time) *models.WeatherHourly {
 	currentTime := targetTime.Truncate(time.Hour).Format("2006-01-02 15:04")
 	for _, hour := range response.Forecast.Forecastday[0].Hour {
 		if hour.Time == currentTime {

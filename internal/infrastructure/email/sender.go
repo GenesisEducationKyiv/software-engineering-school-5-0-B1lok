@@ -3,11 +3,13 @@ package email
 import (
 	"bytes"
 	"fmt"
-	"gopkg.in/gomail.v2"
 	"html/template"
 	"net/http"
+
 	"weather-api/internal/application/email"
 	"weather-api/pkg/errors"
+
+	"gopkg.in/gomail.v2"
 )
 
 type EmailConfig struct {

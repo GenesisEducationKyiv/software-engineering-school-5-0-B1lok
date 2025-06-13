@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
+
 	"weather-api/internal/domain/models"
 	"weather-api/pkg/errors"
 )
@@ -46,19 +48,27 @@ func (r *WeatherRepository) GetWeather(ctx context.Context, city string) (*model
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Println("Error closing response body:", err)
+		}
+	}()
 
 	if err := r.handleAPIResponse(resp); err != nil {
 		return nil, err
 	}
 	var apiResponse WeatherRepositoryResponse
 	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
-		return nil, errors.Wrap(err, "failed to parse weather data", http.StatusInternalServerError)
+		return nil, errors.Wrap(
+			err, "failed to parse weather data", http.StatusInternalServerError,
+		)
 	}
-	return ToWeather(&apiResponse), nil
+	return toWeather(&apiResponse), nil
 }
 
-func (r *WeatherRepository) GetDailyForecast(ctx context.Context, city string) (*models.WeatherDaily, error) {
+func (r *WeatherRepository) GetDailyForecast(
+	ctx context.Context, city string,
+) (*models.WeatherDaily, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s&days=1",
 		baseUrl,
 		forecastEndpoint,
@@ -69,7 +79,11 @@ func (r *WeatherRepository) GetDailyForecast(ctx context.Context, city string) (
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Println("Error closing response body:", err)
+		}
+	}()
 
 	if err := r.handleAPIResponse(resp); err != nil {
 		return nil, err
@@ -79,10 +93,12 @@ func (r *WeatherRepository) GetDailyForecast(ctx context.Context, city string) (
 	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
 		return nil, errors.Wrap(err, "failed to parse weather data", http.StatusInternalServerError)
 	}
-	return ToWeatherDaily(&apiResponse), nil
+	return toWeatherDaily(&apiResponse), nil
 }
 
-func (r *WeatherRepository) GetHourlyForecast(ctx context.Context, city string) (*models.WeatherHourly, error) {
+func (r *WeatherRepository) GetHourlyForecast(
+	ctx context.Context, city string,
+) (*models.WeatherHourly, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s&days=1",
 		baseUrl,
 		forecastEndpoint,
@@ -93,7 +109,11 @@ func (r *WeatherRepository) GetHourlyForecast(ctx context.Context, city string) 
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Println("Error closing response body:", err)
+		}
+	}()
 
 	if err := r.handleAPIResponse(resp); err != nil {
 		return nil, err
@@ -103,9 +123,12 @@ func (r *WeatherRepository) GetHourlyForecast(ctx context.Context, city string) 
 	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
 		return nil, errors.Wrap(err, "failed to parse weather data", http.StatusInternalServerError)
 	}
-	return ToWeatherHourly(&apiResponse, r.clock.Now()), nil
+	return toWeatherHourly(&apiResponse, r.clock.Now()), nil
 }
-func (r *WeatherRepository) requestWeatherAPI(ctx context.Context, endpoint string) (*http.Response, error) {
+
+func (r *WeatherRepository) requestWeatherAPI(
+	ctx context.Context, endpoint string,
+) (*http.Response, error) {
 	resp, err := r.client.Get(endpoint)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to connect to weather API", http.StatusServiceUnavailable)
@@ -129,7 +152,9 @@ func (r *WeatherRepository) handleAPIResponse(resp *http.Response) error {
 			return errors.New("City not found", http.StatusNotFound)
 		}
 
-		return errors.New(fmt.Sprintf("weather API error: %s", errResp.Error.Message), http.StatusBadGateway)
+		return errors.New(fmt.Sprintf(
+			"weather API error: %s", errResp.Error.Message), http.StatusBadGateway,
+		)
 	}
 
 	return nil

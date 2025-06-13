@@ -2,9 +2,10 @@ package models
 
 import (
 	"errors"
-	"github.com/google/uuid"
 	"net/mail"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Frequency string

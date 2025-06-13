@@ -2,9 +2,11 @@ package postgres
 
 import (
 	"fmt"
+
+	"weather-api/internal/config"
+
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"weather-api/internal/config"
 )
 
 func ConnectDB(cfg config.Config) (*gorm.DB, error) {
