@@ -94,8 +94,6 @@ internal/
 │   ├── command/          # Command handlers for operations
 │   ├── common/           # Shared application utilities
 │   ├── email/            # Email application services
-│   ├── interfaces/       # Application service interfaces
-│   ├── mapper/           # Data transformation utilities
 │   ├── query/            # Query handlers for data retrieval
 │   ├── scheduled/        # Scheduled task handlers
 │   └── services/         # Application service implementations
@@ -107,11 +105,12 @@ internal/
 │   ├── db/              # Database implementations
 │   ├── email/           # Email service implementations
 │   ├── http/            # HTTP server configuration
-│   └── interface/       # External interface implementations
-│       └── api/rest/    # REST API controllers
-│           ├── dto/     # Data Transfer Objects
-│           ├── subscription_controller.go
-│           └── weather_controller.go
+│── interface/       # External interface implementations
+│   └── rest/    # REST API controllers
+│         ├── dto/     # Data Transfer Objects
+│         ├── subscription_controller.go
+│         └── weather_controller.go
+├── test/  # Integration tests that cover full controllers interactions
 ├── config/              # Configuration management
 ├── migrations/          # Database migration files
 └── pkg/                # Shared packages and utilities
@@ -346,3 +345,7 @@ End-to-End tests validate complete user workflows through the HTTP interface, da
     * Implement subscription analytics and usage reporting.
     * Add A/B testing framework for email templates and features.
     * Implement user behavior tracking and engagement metrics.
+* **CI/CD Managed Migrations**
+    * Move database schema migrations to a dedicated CI/CD pipeline step.
+    * Ensure database schema is validated and applied before application deployment.
+    * Improve debugging and control by decoupling migrations from runtime logic.

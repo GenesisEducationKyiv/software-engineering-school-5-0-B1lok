@@ -12,11 +12,12 @@ import (
 	"strings"
 	"testing"
 
+	"weather-api/internal/interface/rest"
+
 	"weather-api/internal/application/services"
 	"weather-api/internal/config"
 	"weather-api/internal/domain/models"
 	postgresconnector "weather-api/internal/infrastructure/db/postgres"
-	"weather-api/internal/interface/api/rest"
 	"weather-api/internal/test/containers"
 	"weather-api/internal/test/stubs"
 	"weather-api/pkg/middleware"

@@ -8,6 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	rest2 "weather-api/internal/interface/rest"
+
 	"weather-api/internal/application/scheduled"
 	"weather-api/internal/application/services"
 	"weather-api/internal/config"
@@ -15,7 +17,6 @@ import (
 	"weather-api/internal/infrastructure/email"
 	cityValidator "weather-api/internal/infrastructure/http/validator"
 	weatherapi "weather-api/internal/infrastructure/http/weather-api"
-	"weather-api/internal/interface/api/rest"
 	"weather-api/pkg/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -27,11 +28,11 @@ import (
 type Components struct {
 	WeatherRepo            *weatherapi.WeatherRepository
 	WeatherService         *services.WeatherService
-	WeatherController      *rest.WeatherController
+	WeatherController      *rest2.WeatherController
 	CityValidator          *cityValidator.CityValidator
 	SubscriptionRepo       *postgresconnector.SubscriptionRepository
 	SubscriptionService    *services.SubscriptionService
-	SubscriptionController *rest.SubscriptionController
+	SubscriptionController *rest2.SubscriptionController
 	Sender                 *email.Sender
 	TxManager              middleware.TxManager
 	JobManager             *scheduled.JobManager
@@ -79,7 +80,7 @@ func run() error {
 func setupComponents(ctx context.Context, cfg config.Config, db *gorm.DB) *Components {
 	weatherRepo := weatherapi.NewWeatherRepository(cfg.WeatherApiKey)
 	weatherService := services.NewWeatherService(weatherRepo)
-	weatherController := rest.NewWeatherController(weatherService)
+	weatherController := rest2.NewWeatherController(weatherService)
 	cityValidatorImpl := cityValidator.NewCityValidator(cfg.WeatherApiKey)
 	sender := email.NewEmailSender(email.CreateConfig(cfg))
 	txManager := middleware.NewTxManager(db)
@@ -87,7 +88,7 @@ func setupComponents(ctx context.Context, cfg config.Config, db *gorm.DB) *Compo
 	subscriptionRepo := postgresconnector.NewSubscriptionRepository(db)
 	subscriptionService := services.NewSubscriptionService(
 		subscriptionRepo, cityValidatorImpl, sender, cfg.ServerHost)
-	subscriptionController := rest.NewSubscriptionController(subscriptionService)
+	subscriptionController := rest2.NewSubscriptionController(subscriptionService)
 
 	jm := scheduled.NewJobManager(ctx)
 	return &Components{
