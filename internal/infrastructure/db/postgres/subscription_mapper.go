@@ -4,7 +4,7 @@ import (
 	"weather-api/internal/domain/models"
 )
 
-func ToEntity(subscription *models.Subscription) *SubscriptionEntity {
+func toEntity(subscription *models.Subscription) *SubscriptionEntity {
 	if subscription == nil {
 		return nil
 	}
@@ -21,7 +21,7 @@ func ToEntity(subscription *models.Subscription) *SubscriptionEntity {
 	}
 }
 
-func ToDomain(entity *SubscriptionEntity) (*models.Subscription, error) {
+func toDomain(entity *SubscriptionEntity) (*models.Subscription, error) {
 	if entity == nil {
 		return nil, nil
 	}
@@ -40,14 +40,14 @@ func ToDomain(entity *SubscriptionEntity) (*models.Subscription, error) {
 	return subscription, nil
 }
 
-func ToDomainList(entities []SubscriptionEntity) ([]*models.Subscription, error) {
+func toDomainList(entities []SubscriptionEntity) ([]*models.Subscription, error) {
 	if entities == nil {
 		return nil, nil
 	}
 
 	result := make([]*models.Subscription, 0, len(entities))
 	for _, entity := range entities {
-		sub, err := ToDomain(&entity)
+		sub, err := toDomain(&entity)
 		if err != nil {
 			return nil, err
 		}

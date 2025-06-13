@@ -2,10 +2,12 @@ package postgres
 
 import (
 	"fmt"
-	"github.com/golang-migrate/migrate/v4"
 	"log"
 	"net/url"
+
 	"weather-api/internal/config"
+
+	"github.com/golang-migrate/migrate/v4"
 )
 
 func RunMigrations(cfg config.Config) {

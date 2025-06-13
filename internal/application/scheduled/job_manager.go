@@ -2,8 +2,9 @@ package scheduled
 
 import (
 	"context"
-	"github.com/robfig/cron/v3"
 	"log"
+
+	"github.com/robfig/cron/v3"
 )
 
 type JobManager struct {

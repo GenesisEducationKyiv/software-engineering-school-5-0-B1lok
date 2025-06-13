@@ -2,17 +2,19 @@ package integration
 
 import (
 	"encoding/json"
-	"github.com/gin-gonic/gin"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/stretchr/testify/suite"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
 	"weather-api/internal/application/services"
 	"weather-api/internal/interface/api/rest"
 	"weather-api/internal/test/stubs"
 	"weather-api/pkg/middleware"
+
+	"github.com/gin-gonic/gin"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/stretchr/testify/suite"
 )
 
 type WeatherControllerTestSuite struct {
@@ -34,7 +36,8 @@ func (suite *WeatherControllerTestSuite) SetupSuite() {
 }
 
 func (suite *WeatherControllerTestSuite) TestGetWeather() {
-	req, _ := http.NewRequest("GET", "/api/weather?city=London", nil)
+	req, reqErr := http.NewRequest(http.MethodGet, "/api/weather?city=London", nil)
+	suite.Require().NoError(reqErr)
 	resp := httptest.NewRecorder()
 
 	suite.Router.ServeHTTP(resp, req)
@@ -50,7 +53,8 @@ func (suite *WeatherControllerTestSuite) TestGetWeather() {
 }
 
 func (suite *WeatherControllerTestSuite) TestGetWeatherInvalidCity() {
-	req, _ := http.NewRequest("GET", "/api/weather?city=InvalidCity", nil)
+	req, reqErr := http.NewRequest(http.MethodGet, "/api/weather?city=InvalidCity", nil)
+	suite.Require().NoError(reqErr)
 	resp := httptest.NewRecorder()
 
 	suite.Router.ServeHTTP(resp, req)
@@ -59,7 +63,8 @@ func (suite *WeatherControllerTestSuite) TestGetWeatherInvalidCity() {
 }
 
 func (suite *WeatherControllerTestSuite) TestGetWeatherInvalidQueryParam() {
-	req, _ := http.NewRequest("GET", "/api/weather?city=", nil)
+	req, reqErr := http.NewRequest(http.MethodGet, "/api/weather?city=", nil)
+	suite.Require().NoError(reqErr)
 	resp := httptest.NewRecorder()
 
 	suite.Router.ServeHTTP(resp, req)

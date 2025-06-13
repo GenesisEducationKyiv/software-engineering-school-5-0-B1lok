@@ -2,6 +2,7 @@ package interfaces
 
 import (
 	"context"
+
 	"weather-api/internal/application/command"
 )
 

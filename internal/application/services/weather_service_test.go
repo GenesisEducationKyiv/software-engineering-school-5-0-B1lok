@@ -2,19 +2,24 @@ package services
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
+
 	"weather-api/internal/domain/models"
 	"weather-api/internal/test/mocks"
 	"weather-api/pkg/errors"
+
+	"github.com/stretchr/testify/assert"
+)
+
+const (
+	validatedCity = "Berlin"
 )
 
 func TestWeatherService_GetWeather_Success(t *testing.T) {
 	mockRepo := new(mocks.MockWeatherRepository)
 	service := NewWeatherService(mockRepo)
 	ctx := context.Background()
-	city := "Berlin"
 
 	mockWeather := &models.Weather{
 		Temperature: 20.5,
@@ -22,9 +27,9 @@ func TestWeatherService_GetWeather_Success(t *testing.T) {
 		Description: "Partly Cloudy",
 	}
 
-	mockRepo.On("GetWeather", ctx, city).Return(mockWeather, nil)
+	mockRepo.On("GetWeather", ctx, validatedCity).Return(mockWeather, nil)
 
-	result, err := service.GetWeather(ctx, city)
+	result, err := service.GetWeather(ctx, validatedCity)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
