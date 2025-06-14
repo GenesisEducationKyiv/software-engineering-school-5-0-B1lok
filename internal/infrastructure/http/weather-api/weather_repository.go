@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"time"
 
-	"weather-api/internal/domain/models"
+	"weather-api/internal/domain"
 	"weather-api/pkg/errors"
 )
 
@@ -37,7 +37,7 @@ func (r *WeatherRepository) SetClock(clock Clock) {
 	r.clock = clock
 }
 
-func (r *WeatherRepository) GetWeather(ctx context.Context, city string) (*models.Weather, error) {
+func (r *WeatherRepository) GetWeather(ctx context.Context, city string) (*domain.Weather, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s",
 		baseUrl,
 		currentEndpoint,
@@ -68,7 +68,7 @@ func (r *WeatherRepository) GetWeather(ctx context.Context, city string) (*model
 
 func (r *WeatherRepository) GetDailyForecast(
 	ctx context.Context, city string,
-) (*models.WeatherDaily, error) {
+) (*domain.WeatherDaily, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s&days=1",
 		baseUrl,
 		forecastEndpoint,
@@ -98,7 +98,7 @@ func (r *WeatherRepository) GetDailyForecast(
 
 func (r *WeatherRepository) GetHourlyForecast(
 	ctx context.Context, city string,
-) (*models.WeatherHourly, error) {
+) (*domain.WeatherHourly, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s&days=1",
 		baseUrl,
 		forecastEndpoint,

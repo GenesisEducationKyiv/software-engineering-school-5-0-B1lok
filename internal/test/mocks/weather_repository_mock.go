@@ -3,7 +3,7 @@ package mocks
 import (
 	"context"
 
-	"weather-api/internal/domain/models"
+	"weather-api/internal/domain"
 
 	"github.com/stretchr/testify/mock"
 )
@@ -14,30 +14,30 @@ type MockWeatherRepository struct {
 
 func (m *MockWeatherRepository) GetWeather(ctx context.Context,
 	city string,
-) (*models.Weather, error) {
+) (*domain.Weather, error) {
 	args := m.Called(ctx, city)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*models.Weather), args.Error(1)
+	return args.Get(0).(*domain.Weather), args.Error(1)
 }
 
 func (m *MockWeatherRepository) GetDailyForecast(ctx context.Context,
 	city string,
-) (*models.WeatherDaily, error) {
+) (*domain.WeatherDaily, error) {
 	args := m.Called(ctx, city)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*models.WeatherDaily), args.Error(1)
+	return args.Get(0).(*domain.WeatherDaily), args.Error(1)
 }
 
 func (m *MockWeatherRepository) GetHourlyForecast(ctx context.Context,
 	city string,
-) (*models.WeatherHourly, error) {
+) (*domain.WeatherHourly, error) {
 	args := m.Called(ctx, city)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*models.WeatherHourly), args.Error(1)
+	return args.Get(0).(*domain.WeatherHourly), args.Error(1)
 }

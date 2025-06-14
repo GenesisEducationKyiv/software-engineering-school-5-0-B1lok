@@ -5,36 +5,43 @@ import (
 	"fmt"
 
 	"weather-api/internal/application/email"
-	"weather-api/internal/domain/models"
-	"weather-api/internal/domain/repositories"
+	"weather-api/internal/domain"
 )
 
+type WeatherHourlySender interface {
+	WeatherHourlyEmail(email *email.WeatherHourlyEmail) error
+}
+
+type WeatherHourlyReader interface {
+	GetHourlyForecast(ctx context.Context, city string) (*domain.WeatherHourly, error)
+}
+
 type HourlyWeatherUpdateJob struct {
-	executor *WeatherJobExecutor[*models.WeatherHourly, *HourlyEmailTask]
+	executor *WeatherJobExecutor[*domain.WeatherHourly, *HourlyEmailTask]
 }
 
 type HourlyEmailTask struct {
-	subscription  *models.Subscription
-	weatherHourly *models.WeatherHourly
+	subscription  *domain.Subscription
+	weatherHourly *domain.WeatherHourly
 	host          string
 }
 
-func (t *HourlyEmailTask) GetSubscription() *models.Subscription {
+func (t *HourlyEmailTask) GetSubscription() *domain.Subscription {
 	return t.subscription
 }
 
 func NewHourlyWeatherUpdateJob(
-	weatherRepo repositories.WeatherRepository,
-	subscriptionRepo repositories.SubscriptionRepository,
-	sender email.Sender,
+	weatherRepo WeatherHourlyReader,
+	subscriptionRepo GroupedSubscriptionReader,
+	sender WeatherHourlySender,
 	host string,
 ) *HourlyWeatherUpdateJob {
-	getWeatherFunc := func(ctx context.Context, city string) (*models.WeatherHourly, error) {
+	getWeatherFunc := func(ctx context.Context, city string) (*domain.WeatherHourly, error) {
 		return weatherRepo.GetHourlyForecast(ctx, city)
 	}
 
-	createTaskFunc := func(subscription *models.Subscription,
-		weather *models.WeatherHourly,
+	createTaskFunc := func(subscription *domain.Subscription,
+		weather *domain.WeatherHourly,
 	) *HourlyEmailTask {
 		return &HourlyEmailTask{
 			subscription:  subscription,
@@ -50,9 +57,7 @@ func NewHourlyWeatherUpdateJob(
 	}
 
 	exec := NewWeatherJobExecutor(
-		weatherRepo,
 		subscriptionRepo,
-		sender,
 		host,
 		"hourly",
 		getWeatherFunc,
@@ -78,8 +83,8 @@ func (h *HourlyWeatherUpdateJob) Run(ctx context.Context) error {
 }
 
 func toWeatherHourlyEmail(
-	subscription *models.Subscription,
-	weatherHourly *models.WeatherHourly, host string,
+	subscription *domain.Subscription,
+	weatherHourly *domain.WeatherHourly, host string,
 ) *email.WeatherHourlyEmail {
 	return &email.WeatherHourlyEmail{
 		To:             subscription.Email,

@@ -1,6 +1,8 @@
 package command
 
-import "weather-api/internal/domain/models"
+import (
+	"weather-api/internal/domain"
+)
 
 type SubscribeCommand struct {
 	Email     string
@@ -8,10 +10,10 @@ type SubscribeCommand struct {
 	Frequency string
 }
 
-func (c *SubscribeCommand) ToSubscriptionLookup() *models.SubscriptionLookup {
-	return &models.SubscriptionLookup{
+func (c *SubscribeCommand) ToSubscriptionLookup() *domain.SubscriptionLookup {
+	return &domain.SubscriptionLookup{
 		Email:     c.Email,
 		City:      c.City,
-		Frequency: models.Frequency(c.Frequency),
+		Frequency: domain.Frequency(c.Frequency),
 	}
 }

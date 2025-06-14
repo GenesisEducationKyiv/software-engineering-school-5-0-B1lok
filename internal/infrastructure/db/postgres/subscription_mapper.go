@@ -1,10 +1,10 @@
 package postgres
 
 import (
-	"weather-api/internal/domain/models"
+	"weather-api/internal/domain"
 )
 
-func toEntity(subscription *models.Subscription) *SubscriptionEntity {
+func toEntity(subscription *domain.Subscription) *SubscriptionEntity {
 	if subscription == nil {
 		return nil
 	}
@@ -21,12 +21,12 @@ func toEntity(subscription *models.Subscription) *SubscriptionEntity {
 	}
 }
 
-func toDomain(entity *SubscriptionEntity) (*models.Subscription, error) {
+func toDomain(entity *SubscriptionEntity) (*domain.Subscription, error) {
 	if entity == nil {
 		return nil, nil
 	}
 
-	subscription := &models.Subscription{
+	subscription := &domain.Subscription{
 		ID:        entity.ID,
 		Email:     entity.Email,
 		City:      entity.City,
@@ -40,12 +40,12 @@ func toDomain(entity *SubscriptionEntity) (*models.Subscription, error) {
 	return subscription, nil
 }
 
-func toDomainList(entities []SubscriptionEntity) ([]*models.Subscription, error) {
+func toDomainList(entities []SubscriptionEntity) ([]*domain.Subscription, error) {
 	if entities == nil {
 		return nil, nil
 	}
 
-	result := make([]*models.Subscription, 0, len(entities))
+	result := make([]*domain.Subscription, 0, len(entities))
 	for _, entity := range entities {
 		sub, err := toDomain(&entity)
 		if err != nil {

@@ -6,50 +6,44 @@ import (
 	"sync"
 	"time"
 
-	"weather-api/internal/application/email"
-	"weather-api/internal/domain/models"
-	"weather-api/internal/domain/repositories"
+	"weather-api/internal/domain"
 )
 
-type WeatherData interface {
-	*models.WeatherHourly | *models.WeatherDaily
+type GroupedSubscriptionReader interface {
+	FindGroupedSubscriptions(
+		ctx context.Context, frequency *domain.Frequency,
+	) ([]*domain.GroupedSubscription, error)
 }
 
-type WeatherEmail interface {
-	*email.WeatherHourlyEmail | *email.WeatherDailyEmail
+type WeatherData interface {
+	*domain.WeatherHourly | *domain.WeatherDaily
 }
 
 type EmailTask interface {
-	GetSubscription() *models.Subscription
+	GetSubscription() *domain.Subscription
 }
 
 type WeatherJobExecutor[T WeatherData, E EmailTask] struct {
-	weatherRepo      repositories.WeatherRepository
-	subscriptionRepo repositories.SubscriptionRepository
-	sender           email.Sender
+	subscriptionRepo GroupedSubscriptionReader
 	host             string
 	workerCount      int
-	frequency        models.Frequency
+	frequency        domain.Frequency
 
 	getWeatherFunc func(context.Context, string) (T, error)
-	createTaskFunc func(*models.Subscription, T) E
+	createTaskFunc func(*domain.Subscription, T) E
 	sendEmailFunc  func(E) error
 }
 
 func NewWeatherJobExecutor[T WeatherData, E EmailTask](
-	weatherRepo repositories.WeatherRepository,
-	subscriptionRepo repositories.SubscriptionRepository,
-	sender email.Sender,
+	subscriptionRepo GroupedSubscriptionReader,
 	host string,
-	frequency models.Frequency,
+	frequency domain.Frequency,
 	getWeatherFunc func(context.Context, string) (T, error),
-	createTaskFunc func(*models.Subscription, T) E,
+	createTaskFunc func(*domain.Subscription, T) E,
 	sendEmailFunc func(E) error,
 ) *WeatherJobExecutor[T, E] {
 	return &WeatherJobExecutor[T, E]{
-		weatherRepo:      weatherRepo,
 		subscriptionRepo: subscriptionRepo,
-		sender:           sender,
 		host:             host,
 		workerCount:      10,
 		frequency:        frequency,
@@ -90,7 +84,7 @@ func (e *WeatherJobExecutor[T, E]) Execute(ctx context.Context) error {
 }
 
 func (e *WeatherJobExecutor[T, E]) startWorkers(
-	groups []*models.GroupedSubscription,
+	groups []*domain.GroupedSubscription,
 ) (chan E, chan error, *sync.WaitGroup) {
 	totalSubscriptions := 0
 	for _, group := range groups {
@@ -110,7 +104,7 @@ func (e *WeatherJobExecutor[T, E]) startWorkers(
 }
 
 func (e *WeatherJobExecutor[T, E]) dispatchTasks(
-	ctx context.Context, groups []*models.GroupedSubscription, taskChan chan<- E,
+	ctx context.Context, groups []*domain.GroupedSubscription, taskChan chan<- E,
 ) error {
 	for _, group := range groups {
 		if ctx.Err() != nil {

@@ -5,36 +5,43 @@ import (
 	"fmt"
 
 	"weather-api/internal/application/email"
-	"weather-api/internal/domain/models"
-	"weather-api/internal/domain/repositories"
+	"weather-api/internal/domain"
 )
 
+type WeatherDailySender interface {
+	WeatherDailyEmail(email *email.WeatherDailyEmail) error
+}
+
+type WeatherDailyReader interface {
+	GetDailyForecast(ctx context.Context, city string) (*domain.WeatherDaily, error)
+}
+
 type DailyWeatherUpdateJob struct {
-	executor *WeatherJobExecutor[*models.WeatherDaily, *DailyEmailTask]
+	executor *WeatherJobExecutor[*domain.WeatherDaily, *DailyEmailTask]
 }
 
 type DailyEmailTask struct {
-	subscription *models.Subscription
-	weatherDaily *models.WeatherDaily
+	subscription *domain.Subscription
+	weatherDaily *domain.WeatherDaily
 	host         string
 }
 
-func (t *DailyEmailTask) GetSubscription() *models.Subscription {
+func (t *DailyEmailTask) GetSubscription() *domain.Subscription {
 	return t.subscription
 }
 
 func NewDailyWeatherUpdateJob(
-	weatherRepo repositories.WeatherRepository,
-	subscriptionRepo repositories.SubscriptionRepository,
-	sender email.Sender,
+	weatherRepo WeatherDailyReader,
+	subscriptionRepo GroupedSubscriptionReader,
+	sender WeatherDailySender,
 	host string,
 ) *DailyWeatherUpdateJob {
-	getWeatherFunc := func(ctx context.Context, city string) (*models.WeatherDaily, error) {
+	getWeatherFunc := func(ctx context.Context, city string) (*domain.WeatherDaily, error) {
 		return weatherRepo.GetDailyForecast(ctx, city)
 	}
 
-	createTaskFunc := func(subscription *models.Subscription,
-		weather *models.WeatherDaily,
+	createTaskFunc := func(subscription *domain.Subscription,
+		weather *domain.WeatherDaily,
 	) *DailyEmailTask {
 		return &DailyEmailTask{
 			subscription: subscription,
@@ -50,9 +57,7 @@ func NewDailyWeatherUpdateJob(
 	}
 
 	exec := NewWeatherJobExecutor(
-		weatherRepo,
 		subscriptionRepo,
-		sender,
 		host,
 		"daily",
 		getWeatherFunc,
@@ -78,8 +83,8 @@ func (d *DailyWeatherUpdateJob) Run(ctx context.Context) error {
 }
 
 func toWeatherDailyEmail(
-	subscription *models.Subscription,
-	weatherDaily *models.WeatherDaily,
+	subscription *domain.Subscription,
+	weatherDaily *domain.WeatherDaily,
 	host string,
 ) *email.WeatherDailyEmail {
 	return &email.WeatherDailyEmail{
