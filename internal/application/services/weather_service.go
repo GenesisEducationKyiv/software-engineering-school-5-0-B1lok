@@ -3,7 +3,9 @@ package services
 import (
 	"context"
 
-	"weather-api/internal/application/mapper"
+	"weather-api/internal/application/common"
+	"weather-api/internal/domain/models"
+
 	"weather-api/internal/application/query"
 	"weather-api/internal/domain/repositories"
 )
@@ -24,6 +26,14 @@ func (s *WeatherService) GetWeather(
 		return nil, err
 	}
 	var queryResult query.WeatherQueryResult
-	queryResult.Result = mapper.NewWeatherResult(weather)
+	queryResult.Result = toNewWeatherResult(weather)
 	return &queryResult, nil
+}
+
+func toNewWeatherResult(weather *models.Weather) *common.WeatherResult {
+	return &common.WeatherResult{
+		Temperature: weather.Temperature,
+		Humidity:    weather.Humidity,
+		Description: weather.Description,
+	}
 }

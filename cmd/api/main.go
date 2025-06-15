@@ -15,7 +15,7 @@ import (
 	"weather-api/internal/infrastructure/email"
 	cityValidator "weather-api/internal/infrastructure/http/validator"
 	weatherapi "weather-api/internal/infrastructure/http/weather-api"
-	"weather-api/internal/interface/api/rest"
+	"weather-api/internal/interface/rest"
 	"weather-api/pkg/middleware"
 
 	"github.com/gin-gonic/gin"

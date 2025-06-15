@@ -1,20 +1,26 @@
 package rest
 
 import (
+	"context"
 	"net/http"
 
-	"weather-api/internal/application/interfaces"
-	"weather-api/internal/interface/api/rest/dto/mapper"
+	"weather-api/internal/application/query"
+	"weather-api/internal/interface/rest/dto/mapper"
+
 	"weather-api/pkg/errors"
 
 	"github.com/gin-gonic/gin"
 )
 
-type WeatherController struct {
-	service interfaces.WeatherService
+type WeatherService interface {
+	GetWeather(ctx context.Context, city string) (*query.WeatherQueryResult, error)
 }
 
-func NewWeatherController(service interfaces.WeatherService) *WeatherController {
+type WeatherController struct {
+	service WeatherService
+}
+
+func NewWeatherController(service WeatherService) *WeatherController {
 	return &WeatherController{
 		service: service,
 	}
