@@ -2,14 +2,16 @@ package scheduled
 
 import (
 	"context"
-	"fmt"
 
-	"weather-api/internal/application/email"
 	"weather-api/internal/domain"
 )
 
-type WeatherHourlySender interface {
-	WeatherHourlyEmail(email *email.WeatherHourlyEmail) error
+type WeatherHourlyNotifier interface {
+	NotifyHourlyWeather(
+		ctx context.Context,
+		subscription *domain.Subscription,
+		weatherHourly *domain.WeatherHourly,
+	) error
 }
 
 type WeatherHourlyReader interface {
@@ -17,52 +19,31 @@ type WeatherHourlyReader interface {
 }
 
 type HourlyWeatherUpdateJob struct {
-	executor *WeatherJobExecutor[*domain.WeatherHourly, *HourlyEmailTask]
-}
-
-type HourlyEmailTask struct {
-	subscription  *domain.Subscription
-	weatherHourly *domain.WeatherHourly
-	host          string
-}
-
-func (t *HourlyEmailTask) GetSubscription() *domain.Subscription {
-	return t.subscription
+	executor *WeatherJobExecutor[*domain.WeatherHourly]
 }
 
 func NewHourlyWeatherUpdateJob(
 	weatherRepo WeatherHourlyReader,
 	subscriptionRepo GroupedSubscriptionReader,
-	sender WeatherHourlySender,
-	host string,
+	notifier WeatherHourlyNotifier,
 ) *HourlyWeatherUpdateJob {
 	getWeatherFunc := func(ctx context.Context, city string) (*domain.WeatherHourly, error) {
 		return weatherRepo.GetHourlyForecast(ctx, city)
 	}
 
-	createTaskFunc := func(subscription *domain.Subscription,
-		weather *domain.WeatherHourly,
-	) *HourlyEmailTask {
-		return &HourlyEmailTask{
-			subscription:  subscription,
-			weatherHourly: weather,
-			host:          host,
-		}
-	}
-
-	sendEmailFunc := func(task *HourlyEmailTask) error {
-		return sender.WeatherHourlyEmail(
-			toWeatherHourlyEmail(task.subscription, task.weatherHourly, task.host),
-		)
+	notifyFunc := func(
+		ctx context.Context,
+		subscription *domain.Subscription,
+		weatherHourly *domain.WeatherHourly,
+	) error {
+		return notifier.NotifyHourlyWeather(ctx, subscription, weatherHourly)
 	}
 
 	exec := NewWeatherJobExecutor(
 		subscriptionRepo,
-		host,
 		"hourly",
 		getWeatherFunc,
-		createTaskFunc,
-		sendEmailFunc,
+		notifyFunc,
 	)
 
 	return &HourlyWeatherUpdateJob{
@@ -80,16 +61,4 @@ func (h *HourlyWeatherUpdateJob) Schedule() string {
 
 func (h *HourlyWeatherUpdateJob) Run(ctx context.Context) error {
 	return h.executor.Execute(ctx)
-}
-
-func toWeatherHourlyEmail(
-	subscription *domain.Subscription,
-	weatherHourly *domain.WeatherHourly, host string,
-) *email.WeatherHourlyEmail {
-	return &email.WeatherHourlyEmail{
-		To:             subscription.Email,
-		Frequency:      string(subscription.Frequency),
-		WeatherHourly:  weatherHourly,
-		UnsubscribeUrl: fmt.Sprintf("%sapi/unsubscribe/%s", host, subscription.Token),
-	}
 }

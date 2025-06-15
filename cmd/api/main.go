@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	appEmail "weather-api/internal/application/email"
 	"weather-api/internal/application/scheduled"
 	"weather-api/internal/application/services"
 	"weather-api/internal/config"
@@ -35,6 +36,7 @@ type Components struct {
 	Sender                 *email.Sender
 	TxManager              middleware.TxManager
 	JobManager             *scheduled.JobManager
+	EmailNotifier          *appEmail.Notifier
 }
 
 func main() {
@@ -59,7 +61,7 @@ func run() error {
 	}
 
 	components := setupComponents(ctx, cfg, db)
-	setupScheduledJobs(components, cfg)
+	setupScheduledJobs(components)
 
 	router := createRouter(components)
 
@@ -83,6 +85,7 @@ func setupComponents(ctx context.Context, cfg config.Config, db *gorm.DB) *Compo
 	cityValidatorImpl := cityValidator.NewCityValidator(cfg.WeatherApiKey)
 	sender := email.NewEmailSender(email.CreateConfig(cfg))
 	txManager := middleware.NewTxManager(db)
+	emailNotifier := appEmail.NewNotifier(cfg.ServerHost, sender)
 
 	subscriptionRepo := postgresconnector.NewSubscriptionRepository(db)
 	subscriptionService := services.NewSubscriptionService(
@@ -101,14 +104,15 @@ func setupComponents(ctx context.Context, cfg config.Config, db *gorm.DB) *Compo
 		Sender:                 sender,
 		TxManager:              txManager,
 		JobManager:             jm,
+		EmailNotifier:          emailNotifier,
 	}
 }
 
-func setupScheduledJobs(components *Components, cfg config.Config) {
+func setupScheduledJobs(components *Components) {
 	components.JobManager.RegisterJob(scheduled.NewHourlyWeatherUpdateJob(
-		components.WeatherRepo, components.SubscriptionRepo, components.Sender, cfg.ServerHost))
+		components.WeatherRepo, components.SubscriptionRepo, components.EmailNotifier))
 	components.JobManager.RegisterJob(scheduled.NewDailyWeatherUpdateJob(
-		components.WeatherRepo, components.SubscriptionRepo, components.Sender, cfg.ServerHost))
+		components.WeatherRepo, components.SubscriptionRepo, components.EmailNotifier))
 	go components.JobManager.StartScheduler()
 }
 
