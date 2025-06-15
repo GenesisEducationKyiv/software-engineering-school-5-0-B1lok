@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"weather-api/internal/domain/models"
+	"weather-api/internal/domain"
 	"weather-api/internal/test/mocks"
 	"weather-api/pkg/errors"
 
@@ -21,7 +21,7 @@ func TestWeatherService_GetWeather_Success(t *testing.T) {
 	service := NewWeatherService(mockRepo)
 	ctx := context.Background()
 
-	mockWeather := &models.Weather{
+	mockWeather := &domain.Weather{
 		Temperature: 20.5,
 		Humidity:    70,
 		Description: "Partly Cloudy",

@@ -6,23 +6,37 @@ import (
 
 	"weather-api/internal/application/command"
 	"weather-api/internal/application/email"
-	"weather-api/internal/domain/models"
-	"weather-api/internal/domain/repositories"
-	"weather-api/internal/domain/validator"
+	"weather-api/internal/domain"
 	"weather-api/pkg/errors"
 )
 
+type ConfirmationSender interface {
+	ConfirmationEmail(email *email.ConfirmationEmail) error
+}
+
+type SubscriptionRepository interface {
+	Create(ctx context.Context, subscription *domain.Subscription) (*domain.Subscription, error)
+	ExistByLookup(ctx context.Context, lookup *domain.SubscriptionLookup) (bool, error)
+	Update(ctx context.Context, subscription *domain.Subscription) (*domain.Subscription, error)
+	Delete(ctx context.Context, id uint) error
+	FindByToken(ctx context.Context, token string) (*domain.Subscription, error)
+}
+
+type CityValidator interface {
+	Validate(city string) (*string, error)
+}
+
 type SubscriptionService struct {
-	repository repositories.SubscriptionRepository
-	validator  validator.CityValidator
-	sender     email.Sender
+	repository SubscriptionRepository
+	validator  CityValidator
+	sender     ConfirmationSender
 	host       string
 }
 
 func NewSubscriptionService(
-	repository repositories.SubscriptionRepository,
-	validator validator.CityValidator,
-	sender email.Sender, host string,
+	repository SubscriptionRepository,
+	validator CityValidator,
+	sender ConfirmationSender, host string,
 ) *SubscriptionService {
 	return &SubscriptionService{
 		repository: repository, validator: validator, sender: sender, host: host,
@@ -47,10 +61,10 @@ func (s *SubscriptionService) Subscribe(
 		return errors.New("Email already subscribed", http.StatusConflict)
 	}
 
-	newSubscription, err := models.NewSubscription(
+	newSubscription, err := domain.NewSubscription(
 		subscribeCommand.Email,
 		subscribeCommand.City,
-		models.Frequency(subscribeCommand.Frequency),
+		domain.Frequency(subscribeCommand.Frequency),
 	)
 	if err != nil {
 		return errors.Wrap(err, "Invalid input", http.StatusBadRequest)

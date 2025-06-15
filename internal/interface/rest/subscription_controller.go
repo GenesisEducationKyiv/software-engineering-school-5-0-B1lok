@@ -1,21 +1,29 @@
 package rest
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
-	"weather-api/internal/application/interfaces"
-	"weather-api/internal/interface/api/rest/dto/request"
+	"weather-api/internal/application/command"
+	"weather-api/internal/interface/rest/dto/request"
+
 	"weather-api/pkg/errors"
 
 	"github.com/gin-gonic/gin"
 )
 
-type SubscriptionController struct {
-	service interfaces.SubscriptionService
+type SubscriptionService interface {
+	Subscribe(ctx context.Context, subscribeCommand *command.SubscribeCommand) error
+	Confirm(ctx context.Context, token string) error
+	Unsubscribe(ctx context.Context, token string) error
 }
 
-func NewSubscriptionController(service interfaces.SubscriptionService) *SubscriptionController {
+type SubscriptionController struct {
+	service SubscriptionService
+}
+
+func NewSubscriptionController(service SubscriptionService) *SubscriptionController {
 	return &SubscriptionController{service: service}
 }
 

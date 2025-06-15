@@ -1,6 +1,8 @@
 package email
 
-import "weather-api/internal/domain/models"
+import (
+	"weather-api/internal/domain"
+)
 
 type ConfirmationEmail struct {
 	To        string
@@ -13,12 +15,12 @@ type WeatherDailyEmail struct {
 	To             string
 	Frequency      string
 	UnsubscribeUrl string
-	WeatherDaily   *models.WeatherDaily
+	WeatherDaily   *domain.WeatherDaily
 }
 
 type WeatherHourlyEmail struct {
 	To             string
 	Frequency      string
 	UnsubscribeUrl string
-	WeatherHourly  *models.WeatherHourly
+	WeatherHourly  *domain.WeatherHourly
 }
