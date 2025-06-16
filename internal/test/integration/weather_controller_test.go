@@ -6,8 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"weather-api/internal/interface/rest"
+
 	"weather-api/internal/application/services"
-	"weather-api/internal/interface/api/rest"
 	"weather-api/internal/test/stubs"
 	"weather-api/pkg/middleware"
 

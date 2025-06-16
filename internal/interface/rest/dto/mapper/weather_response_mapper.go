@@ -2,7 +2,7 @@ package mapper
 
 import (
 	"weather-api/internal/application/common"
-	"weather-api/internal/interface/api/rest/dto/response"
+	"weather-api/internal/interface/rest/dto/response"
 )
 
 func ToWeatherResponse(weatherResult *common.WeatherResult) *response.WeatherResponse {
