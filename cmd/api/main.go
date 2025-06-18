@@ -22,22 +22,7 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"gorm.io/gorm"
 )
-
-type Components struct {
-	WeatherRepo            *weatherapi.WeatherRepository
-	WeatherService         *services.WeatherService
-	WeatherController      *rest.WeatherController
-	CityValidator          *cityValidator.CityValidator
-	SubscriptionRepo       *postgresconnector.SubscriptionRepository
-	SubscriptionService    *services.SubscriptionService
-	SubscriptionController *rest.SubscriptionController
-	Sender                 *email.Sender
-	TxManager              middleware.TxManager
-	JobManager             *scheduled.JobManager
-	EmailNotifier          *appEmail.Notifier
-}
 
 func main() {
 	if err := run(); err != nil {
@@ -60,10 +45,52 @@ func run() error {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	components := setupComponents(ctx, cfg, db)
-	setupScheduledJobs(components)
+	// Initialize infrastructure components
+	emailSender := email.NewEmailSender(email.CreateConfig(cfg))
+	txManager := middleware.NewTxManager(db)
+	cityValidatorImpl := cityValidator.NewCityValidator(cfg.WeatherApiKey)
 
-	router := createRouter(components)
+	// Initialize repositories
+	weatherRepo := weatherapi.NewWeatherRepository(cfg.WeatherApiKey)
+	subscriptionRepo := postgresconnector.NewSubscriptionRepository(db)
+
+	// Initialize services
+	weatherService := services.NewWeatherService(weatherRepo)
+	subscriptionService := services.NewSubscriptionService(
+		subscriptionRepo, cityValidatorImpl, emailSender, cfg.ServerHost)
+	emailNotifier := appEmail.NewNotifier(cfg.ServerHost, emailSender)
+
+	// Initialize controllers
+	weatherController := rest.NewWeatherController(weatherService)
+	subscriptionController := rest.NewSubscriptionController(subscriptionService)
+
+	// Initialize workers
+	jobManager := scheduled.NewJobManager(ctx)
+	jobManager.RegisterJob(scheduled.NewHourlyWeatherUpdateJob(
+		weatherRepo, subscriptionRepo, emailNotifier))
+	jobManager.RegisterJob(scheduled.NewDailyWeatherUpdateJob(
+		weatherRepo, subscriptionRepo, emailNotifier))
+	go jobManager.StartScheduler()
+
+	// Initialize router
+	router := gin.Default()
+
+	router.LoadHTMLGlob("templates/index.html")
+
+	router.Use(middleware.ErrorHandler())
+	router.Use(middleware.TransactionMiddleware(txManager))
+
+	router.GET("/", func(c *gin.Context) {
+		c.HTML(200, "index.html", nil)
+	})
+
+	api := router.Group("/api")
+	{
+		api.GET("/weather", weatherController.GetWeather)
+		api.POST("/subscribe", subscriptionController.Subscribe)
+		api.GET("/confirm/:token", subscriptionController.Confirm)
+		api.GET("/unsubscribe/:token", subscriptionController.Unsubscribe)
+	}
 
 	go func() {
 		<-ctx.Done()
@@ -76,65 +103,4 @@ func run() error {
 		return fmt.Errorf("failed to start server: %w", err)
 	}
 	return nil
-}
-
-func setupComponents(ctx context.Context, cfg config.Config, db *gorm.DB) *Components {
-	weatherRepo := weatherapi.NewWeatherRepository(cfg.WeatherApiKey)
-	weatherService := services.NewWeatherService(weatherRepo)
-	weatherController := rest.NewWeatherController(weatherService)
-	cityValidatorImpl := cityValidator.NewCityValidator(cfg.WeatherApiKey)
-	sender := email.NewEmailSender(email.CreateConfig(cfg))
-	txManager := middleware.NewTxManager(db)
-	emailNotifier := appEmail.NewNotifier(cfg.ServerHost, sender)
-
-	subscriptionRepo := postgresconnector.NewSubscriptionRepository(db)
-	subscriptionService := services.NewSubscriptionService(
-		subscriptionRepo, cityValidatorImpl, sender, cfg.ServerHost)
-	subscriptionController := rest.NewSubscriptionController(subscriptionService)
-
-	jm := scheduled.NewJobManager(ctx)
-	return &Components{
-		WeatherRepo:            weatherRepo,
-		WeatherService:         weatherService,
-		WeatherController:      weatherController,
-		CityValidator:          cityValidatorImpl,
-		SubscriptionRepo:       subscriptionRepo,
-		SubscriptionService:    subscriptionService,
-		SubscriptionController: subscriptionController,
-		Sender:                 sender,
-		TxManager:              txManager,
-		JobManager:             jm,
-		EmailNotifier:          emailNotifier,
-	}
-}
-
-func setupScheduledJobs(components *Components) {
-	components.JobManager.RegisterJob(scheduled.NewHourlyWeatherUpdateJob(
-		components.WeatherRepo, components.SubscriptionRepo, components.EmailNotifier))
-	components.JobManager.RegisterJob(scheduled.NewDailyWeatherUpdateJob(
-		components.WeatherRepo, components.SubscriptionRepo, components.EmailNotifier))
-	go components.JobManager.StartScheduler()
-}
-
-func createRouter(components *Components) *gin.Engine {
-	router := gin.Default()
-
-	router.LoadHTMLGlob("templates/index.html")
-
-	router.Use(middleware.ErrorHandler())
-	router.Use(middleware.TransactionMiddleware(components.TxManager))
-
-	router.GET("/", func(c *gin.Context) {
-		c.HTML(200, "index.html", nil)
-	})
-
-	api := router.Group("/api")
-	{
-		api.GET("/weather", components.WeatherController.GetWeather)
-		api.POST("/subscribe", components.SubscriptionController.Subscribe)
-		api.GET("/confirm/:token", components.SubscriptionController.Confirm)
-		api.GET("/unsubscribe/:token", components.SubscriptionController.Unsubscribe)
-	}
-
-	return router
 }
