@@ -4,14 +4,14 @@ import (
 	"context"
 	"net/http"
 
-	"weather-api/internal/domain/models"
+	"weather-api/internal/domain"
 	"weather-api/pkg/errors"
 )
 
 type WeatherRepositoryStub struct {
-	GetWeatherFn        func(ctx context.Context, city string) (*models.Weather, error)
-	GetDailyForecastFn  func(ctx context.Context, city string) (*models.WeatherDaily, error)
-	GetHourlyForecastFn func(ctx context.Context, city string) (*models.WeatherHourly, error)
+	GetWeatherFn        func(ctx context.Context, city string) (*domain.Weather, error)
+	GetDailyForecastFn  func(ctx context.Context, city string) (*domain.WeatherDaily, error)
+	GetHourlyForecastFn func(ctx context.Context, city string) (*domain.WeatherHourly, error)
 }
 
 func NewWeatherRepositoryStub() *WeatherRepositoryStub {
@@ -24,14 +24,14 @@ func NewWeatherRepositoryStub() *WeatherRepositoryStub {
 
 func (s *WeatherRepositoryStub) GetWeather(ctx context.Context,
 	city string,
-) (*models.Weather, error) {
+) (*domain.Weather, error) {
 	if s.GetWeatherFn != nil {
 		return s.GetWeatherFn(ctx, city)
 	}
 	if city == "InvalidCity" {
 		return nil, errors.New("City not found", http.StatusNotFound)
 	}
-	return &models.Weather{
+	return &domain.Weather{
 		Temperature: 20.5,
 		Humidity:    60.0,
 		Description: "Clear sky",
@@ -40,11 +40,11 @@ func (s *WeatherRepositoryStub) GetWeather(ctx context.Context,
 
 func (s *WeatherRepositoryStub) GetDailyForecast(ctx context.Context,
 	city string,
-) (*models.WeatherDaily, error) {
+) (*domain.WeatherDaily, error) {
 	if s.GetDailyForecastFn != nil {
 		return s.GetDailyForecastFn(ctx, city)
 	}
-	return &models.WeatherDaily{
+	return &domain.WeatherDaily{
 		Location:   city,
 		Date:       "2025-05-18",
 		MaxTempC:   22.0,
@@ -61,11 +61,11 @@ func (s *WeatherRepositoryStub) GetDailyForecast(ctx context.Context,
 
 func (s *WeatherRepositoryStub) GetHourlyForecast(ctx context.Context,
 	city string,
-) (*models.WeatherHourly, error) {
+) (*domain.WeatherHourly, error) {
 	if s.GetHourlyForecastFn != nil {
 		return s.GetHourlyForecastFn(ctx, city)
 	}
-	return &models.WeatherHourly{
+	return &domain.WeatherHourly{
 		Location:   city,
 		Time:       "12:00",
 		TempC:      20.0,

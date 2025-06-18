@@ -6,60 +6,48 @@ import (
 	"sync"
 	"time"
 
-	"weather-api/internal/application/email"
-	"weather-api/internal/domain/models"
-	"weather-api/internal/domain/repositories"
+	"weather-api/internal/domain"
 )
 
+type GroupedSubscriptionReader interface {
+	FindGroupedSubscriptions(
+		ctx context.Context, frequency *domain.Frequency,
+	) ([]*domain.GroupedSubscription, error)
+}
+
 type WeatherData interface {
-	*models.WeatherHourly | *models.WeatherDaily
+	*domain.WeatherHourly | *domain.WeatherDaily
 }
 
-type WeatherEmail interface {
-	*email.WeatherHourlyEmail | *email.WeatherDailyEmail
+type Task[T WeatherData] struct {
+	Subscription *domain.Subscription
+	WeatherData  T
 }
 
-type EmailTask interface {
-	GetSubscription() *models.Subscription
-}
-
-type WeatherJobExecutor[T WeatherData, E EmailTask] struct {
-	weatherRepo      repositories.WeatherRepository
-	subscriptionRepo repositories.SubscriptionRepository
-	sender           email.Sender
-	host             string
+type WeatherJobExecutor[T WeatherData] struct {
+	subscriptionRepo GroupedSubscriptionReader
 	workerCount      int
-	frequency        models.Frequency
-
-	getWeatherFunc func(context.Context, string) (T, error)
-	createTaskFunc func(*models.Subscription, T) E
-	sendEmailFunc  func(E) error
+	frequency        domain.Frequency
+	getWeatherFunc   func(context.Context, string) (T, error)
+	notifyFunc       func(context.Context, *domain.Subscription, T) error
 }
 
-func NewWeatherJobExecutor[T WeatherData, E EmailTask](
-	weatherRepo repositories.WeatherRepository,
-	subscriptionRepo repositories.SubscriptionRepository,
-	sender email.Sender,
-	host string,
-	frequency models.Frequency,
+func NewWeatherJobExecutor[T WeatherData](
+	subscriptionRepo GroupedSubscriptionReader,
+	frequency domain.Frequency,
 	getWeatherFunc func(context.Context, string) (T, error),
-	createTaskFunc func(*models.Subscription, T) E,
-	sendEmailFunc func(E) error,
-) *WeatherJobExecutor[T, E] {
-	return &WeatherJobExecutor[T, E]{
-		weatherRepo:      weatherRepo,
+	notifyFunc func(context.Context, *domain.Subscription, T) error,
+) *WeatherJobExecutor[T] {
+	return &WeatherJobExecutor[T]{
 		subscriptionRepo: subscriptionRepo,
-		sender:           sender,
-		host:             host,
 		workerCount:      10,
 		frequency:        frequency,
 		getWeatherFunc:   getWeatherFunc,
-		createTaskFunc:   createTaskFunc,
-		sendEmailFunc:    sendEmailFunc,
+		notifyFunc:       notifyFunc,
 	}
 }
 
-func (e *WeatherJobExecutor[T, E]) Execute(ctx context.Context) error {
+func (e *WeatherJobExecutor[T]) Execute(ctx context.Context) error {
 	log.Printf("Weather job started for frequency: %s", e.frequency)
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
@@ -89,28 +77,28 @@ func (e *WeatherJobExecutor[T, E]) Execute(ctx context.Context) error {
 	return nil
 }
 
-func (e *WeatherJobExecutor[T, E]) startWorkers(
-	groups []*models.GroupedSubscription,
-) (chan E, chan error, *sync.WaitGroup) {
+func (e *WeatherJobExecutor[T]) startWorkers(
+	groups []*domain.GroupedSubscription,
+) (chan Task[T], chan error, *sync.WaitGroup) {
 	totalSubscriptions := 0
 	for _, group := range groups {
 		totalSubscriptions += len(group.Subscriptions)
 	}
 
-	taskChan := make(chan E, min(totalSubscriptions, 1000))
+	taskChan := make(chan Task[T], min(totalSubscriptions, 1000))
 	errChan := make(chan error, e.workerCount)
 
 	var wg sync.WaitGroup
 	for i := 0; i < e.workerCount; i++ {
 		wg.Add(1)
-		go e.emailWorker(context.Background(), taskChan, errChan, &wg)
+		go e.worker(context.Background(), taskChan, errChan, &wg)
 	}
 
 	return taskChan, errChan, &wg
 }
 
-func (e *WeatherJobExecutor[T, E]) dispatchTasks(
-	ctx context.Context, groups []*models.GroupedSubscription, taskChan chan<- E,
+func (e *WeatherJobExecutor[T]) dispatchTasks(
+	ctx context.Context, groups []*domain.GroupedSubscription, taskChan chan<- Task[T],
 ) error {
 	for _, group := range groups {
 		if ctx.Err() != nil {
@@ -127,13 +115,16 @@ func (e *WeatherJobExecutor[T, E]) dispatchTasks(
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
-			taskChan <- e.createTaskFunc(sub, weatherData)
+			taskChan <- Task[T]{
+				Subscription: sub,
+				WeatherData:  weatherData,
+			}
 		}
 	}
 	return nil
 }
 
-func (e *WeatherJobExecutor[T, E]) collectErrors(
+func (e *WeatherJobExecutor[T]) collectErrors(
 	ctx context.Context, errChan chan error, wg *sync.WaitGroup,
 ) []error {
 	errorCollector := make(chan []error, 1)
@@ -159,9 +150,9 @@ func (e *WeatherJobExecutor[T, E]) collectErrors(
 	}
 }
 
-func (e *WeatherJobExecutor[T, E]) emailWorker(
+func (e *WeatherJobExecutor[T]) worker(
 	ctx context.Context,
-	taskChan <-chan E,
+	taskChan <-chan Task[T],
 	errChan chan<- error,
 	wg *sync.WaitGroup,
 ) {
@@ -172,7 +163,7 @@ func (e *WeatherJobExecutor[T, E]) emailWorker(
 		case <-ctx.Done():
 			return
 		default:
-			err := e.sendEmailFunc(task)
+			err := e.notifyFunc(ctx, task.Subscription, task.WeatherData)
 			if err != nil {
 				select {
 				case errChan <- err:

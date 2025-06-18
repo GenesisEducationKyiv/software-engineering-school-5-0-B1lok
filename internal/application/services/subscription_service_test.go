@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"weather-api/internal/application/command"
-	"weather-api/internal/domain/models"
+	"weather-api/internal/domain"
 	"weather-api/internal/test/mocks"
 	"weather-api/pkg/errors"
 
@@ -36,16 +36,16 @@ func TestSubscriptionService_Subscribe_Success(t *testing.T) {
 
 	mockValidator.On("Validate", "berlin").Return(validatedCity, nil)
 
-	lookup := &models.SubscriptionLookup{
+	lookup := &domain.SubscriptionLookup{
 		Email:     "test@example.com",
 		City:      validatedCity,
-		Frequency: models.Frequency("daily"),
+		Frequency: domain.Frequency("daily"),
 	}
 
-	subscription := &models.Subscription{
+	subscription := &domain.Subscription{
 		Email:     "test@example.com",
 		City:      validatedCity,
-		Frequency: models.Frequency("daily"),
+		Frequency: domain.Frequency("daily"),
 	}
 	mockRepo.On("ExistByLookup", ctx, lookup).Return(false, nil)
 
@@ -107,7 +107,7 @@ func TestSubscriptionService_Subscribe_AlreadyExists(t *testing.T) {
 
 	mockValidator.On("Validate", "berlin").Return(validatedCity, nil)
 
-	lookup := &models.SubscriptionLookup{
+	lookup := &domain.SubscriptionLookup{
 		Email:     "test@example.com",
 		City:      validatedCity,
 		Frequency: "daily",
@@ -145,7 +145,7 @@ func TestSubscriptionService_Subscribe_RepositoryError(t *testing.T) {
 
 	mockValidator.On("Validate", "berlin").Return(validatedCity, nil)
 
-	lookup := &models.SubscriptionLookup{
+	lookup := &domain.SubscriptionLookup{
 		Email:     "test@example.com",
 		City:      validatedCity,
 		Frequency: "daily",
@@ -223,7 +223,7 @@ func TestSubscriptionService_Subscribe_CreateError(t *testing.T) {
 
 	mockValidator.On("Validate", "berlin").Return(validatedCity, nil)
 
-	lookup := &models.SubscriptionLookup{
+	lookup := &domain.SubscriptionLookup{
 		Email:     "test@example.com",
 		City:      validatedCity,
 		Frequency: "daily",
@@ -263,17 +263,17 @@ func TestSubscriptionService_Subscribe_EmailError(t *testing.T) {
 
 	mockValidator.On("Validate", "berlin").Return(validatedCity, nil)
 
-	lookup := &models.SubscriptionLookup{
+	lookup := &domain.SubscriptionLookup{
 		Email:     "test@example.com",
 		City:      validatedCity,
 		Frequency: "daily",
 	}
 
 	mockRepo.On("ExistByLookup", ctx, lookup).Return(false, nil)
-	subscription := &models.Subscription{
+	subscription := &domain.Subscription{
 		Email:     "test@example.com",
 		City:      validatedCity,
-		Frequency: models.Frequency("daily"),
+		Frequency: domain.Frequency("daily"),
 	}
 	mockRepo.On("Create", ctx, mock.AnythingOfType("*models.Subscription")).Return(subscription, nil)
 
@@ -303,22 +303,22 @@ func TestSubscriptionService_Confirm_Success(t *testing.T) {
 	ctx := context.Background()
 	token := validToken
 
-	subscription := &models.Subscription{
+	subscription := &domain.Subscription{
 		ID:        1,
 		Email:     "test@example.com",
 		City:      "Berlin",
-		Frequency: models.Frequency("daily"),
+		Frequency: domain.Frequency("daily"),
 		Token:     token,
 		Confirmed: false,
 	}
 
 	mockRepo.On("FindByToken", ctx, token).Return(subscription, nil)
 
-	updatedSubscription := &models.Subscription{
+	updatedSubscription := &domain.Subscription{
 		ID:        1,
 		Email:     "test@example.com",
 		City:      "Berlin",
-		Frequency: models.Frequency("daily"),
+		Frequency: domain.Frequency("daily"),
 		Token:     token,
 		Confirmed: true,
 	}
@@ -394,11 +394,11 @@ func TestSubscriptionService_Confirm_UpdateError(t *testing.T) {
 	ctx := context.Background()
 	token := validToken
 
-	subscription := &models.Subscription{
+	subscription := &domain.Subscription{
 		ID:        1,
 		Email:     "test@example.com",
 		City:      "Berlin",
-		Frequency: models.Frequency("daily"),
+		Frequency: domain.Frequency("daily"),
 		Token:     token,
 		Confirmed: false,
 	}
@@ -430,11 +430,11 @@ func TestSubscriptionService_Unsubscribe_Success(t *testing.T) {
 	ctx := context.Background()
 	token := validToken
 
-	subscription := &models.Subscription{
+	subscription := &domain.Subscription{
 		ID:        1,
 		Email:     "test@example.com",
 		City:      "Berlin",
-		Frequency: models.Frequency("daily"),
+		Frequency: domain.Frequency("daily"),
 		Token:     token,
 		Confirmed: true,
 	}
@@ -510,11 +510,11 @@ func TestSubscriptionService_Unsubscribe_DeleteError(t *testing.T) {
 	ctx := context.Background()
 	token := validToken
 
-	subscription := &models.Subscription{
+	subscription := &domain.Subscription{
 		ID:        1,
 		Email:     "test@example.com",
 		City:      "Berlin",
-		Frequency: models.Frequency("daily"),
+		Frequency: domain.Frequency("daily"),
 		Token:     token,
 		Confirmed: true,
 	}

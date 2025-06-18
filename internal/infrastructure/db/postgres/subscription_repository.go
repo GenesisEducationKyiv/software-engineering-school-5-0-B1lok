@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	"weather-api/internal/domain/models"
+	"weather-api/internal/domain"
 	customErrors "weather-api/pkg/errors"
 	"weather-api/pkg/middleware"
 
@@ -21,8 +21,8 @@ func NewSubscriptionRepository(db *gorm.DB) *SubscriptionRepository {
 }
 
 func (r *SubscriptionRepository) Create(
-	ctx context.Context, subscription *models.Subscription,
-) (*models.Subscription, error) {
+	ctx context.Context, subscription *domain.Subscription,
+) (*domain.Subscription, error) {
 	entity := toEntity(subscription)
 	db := r.getDB(ctx)
 
@@ -42,7 +42,7 @@ func (r *SubscriptionRepository) Create(
 }
 
 func (r *SubscriptionRepository) ExistByLookup(
-	ctx context.Context, lookup *models.SubscriptionLookup,
+	ctx context.Context, lookup *domain.SubscriptionLookup,
 ) (bool, error) {
 	var count int64
 	db := r.getDB(ctx)
@@ -59,8 +59,8 @@ func (r *SubscriptionRepository) ExistByLookup(
 }
 
 func (r *SubscriptionRepository) Update(
-	ctx context.Context, subscription *models.Subscription,
-) (*models.Subscription, error) {
+	ctx context.Context, subscription *domain.Subscription,
+) (*domain.Subscription, error) {
 	entity := toEntity(subscription)
 	db := r.getDB(ctx)
 	result := db.Save(entity)
@@ -95,7 +95,7 @@ func (r *SubscriptionRepository) Delete(ctx context.Context, id uint) error {
 
 func (r *SubscriptionRepository) FindByToken(
 	ctx context.Context, token string,
-) (*models.Subscription, error) {
+) (*domain.Subscription, error) {
 	var entity SubscriptionEntity
 	db := r.getDB(ctx)
 	result := db.Where("token = ?", token).First(&entity)
@@ -114,8 +114,8 @@ func (r *SubscriptionRepository) FindByToken(
 }
 
 func (r *SubscriptionRepository) FindGroupedSubscriptions(
-	ctx context.Context, frequency *models.Frequency,
-) ([]*models.GroupedSubscription, error) {
+	ctx context.Context, frequency *domain.Frequency,
+) ([]*domain.GroupedSubscription, error) {
 	var subscriptions []SubscriptionEntity
 	db := r.getDB(ctx)
 
@@ -133,13 +133,13 @@ func (r *SubscriptionRepository) FindGroupedSubscriptions(
 		subscriptionMap[sub.City] = append(subscriptionMap[sub.City], sub)
 	}
 
-	grouped := make([]*models.GroupedSubscription, 0, len(subscriptionMap))
+	grouped := make([]*domain.GroupedSubscription, 0, len(subscriptionMap))
 	for city, subscriptions := range subscriptionMap {
 		domainSubs, err := toDomainList(subscriptions)
 		if err != nil {
 			return nil, err
 		}
-		grouped = append(grouped, &models.GroupedSubscription{
+		grouped = append(grouped, &domain.GroupedSubscription{
 			City:          city,
 			Subscriptions: domainSubs,
 		})

@@ -6,23 +6,37 @@ import (
 
 	"weather-api/internal/application/command"
 	"weather-api/internal/application/email"
-	"weather-api/internal/domain/models"
-	"weather-api/internal/domain/repositories"
-	"weather-api/internal/domain/validator"
+	"weather-api/internal/domain"
 	"weather-api/pkg/errors"
 )
 
+type ConfirmationSender interface {
+	ConfirmationEmail(email *email.ConfirmationEmail) error
+}
+
+type SubscriptionRepository interface {
+	Create(ctx context.Context, subscription *domain.Subscription) (*domain.Subscription, error)
+	ExistByLookup(ctx context.Context, lookup *domain.SubscriptionLookup) (bool, error)
+	Update(ctx context.Context, subscription *domain.Subscription) (*domain.Subscription, error)
+	Delete(ctx context.Context, id uint) error
+	FindByToken(ctx context.Context, token string) (*domain.Subscription, error)
+}
+
+type CityValidator interface {
+	Validate(city string) (*string, error)
+}
+
 type SubscriptionService struct {
-	repository repositories.SubscriptionRepository
-	validator  validator.CityValidator
-	sender     email.Sender
+	repository SubscriptionRepository
+	validator  CityValidator
+	sender     ConfirmationSender
 	host       string
 }
 
 func NewSubscriptionService(
-	repository repositories.SubscriptionRepository,
-	validator validator.CityValidator,
-	sender email.Sender, host string,
+	repository SubscriptionRepository,
+	validator CityValidator,
+	sender ConfirmationSender, host string,
 ) *SubscriptionService {
 	return &SubscriptionService{
 		repository: repository, validator: validator, sender: sender, host: host,
@@ -32,11 +46,9 @@ func NewSubscriptionService(
 func (s *SubscriptionService) Subscribe(
 	ctx context.Context, subscribeCommand *command.SubscribeCommand,
 ) error {
-	validatedCity, err := s.validator.Validate(subscribeCommand.City)
-	if err != nil {
+	if err := s.setValidatedCity(subscribeCommand); err != nil {
 		return err
 	}
-	subscribeCommand.City = *validatedCity
 	exists, err := s.repository.ExistByLookup(ctx, subscribeCommand.ToSubscriptionLookup())
 	if err != nil {
 		return errors.Wrap(
@@ -47,28 +59,14 @@ func (s *SubscriptionService) Subscribe(
 		return errors.New("Email already subscribed", http.StatusConflict)
 	}
 
-	newSubscription, err := models.NewSubscription(
-		subscribeCommand.Email,
-		subscribeCommand.City,
-		models.Frequency(subscribeCommand.Frequency),
-	)
+	newSubscription, err := s.createSubscription(ctx, subscribeCommand)
 	if err != nil {
-		return errors.Wrap(err, "Invalid input", http.StatusBadRequest)
-	}
-
-	savedSubscription, err := s.repository.Create(ctx, newSubscription)
-	if err != nil {
-		return errors.Wrap(err, "failed to create subscription", http.StatusInternalServerError)
-	}
-	confirmationEmail := &email.ConfirmationEmail{
-		To:        savedSubscription.Email,
-		City:      savedSubscription.City,
-		Frequency: string(savedSubscription.Frequency),
-		Url:       s.host + "api/confirm/" + newSubscription.Token,
-	}
-	if err := s.sender.ConfirmationEmail(confirmationEmail); err != nil {
 		return err
 	}
+	if err := s.sendConfirmationEmail(newSubscription); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -102,4 +100,50 @@ func (s *SubscriptionService) Unsubscribe(ctx context.Context, token string) err
 	}
 
 	return s.repository.Delete(ctx, subscription.ID)
+}
+
+func (s *SubscriptionService) setValidatedCity(subscribeCommand *command.SubscribeCommand) error {
+	validatedCity, err := s.validator.Validate(subscribeCommand.City)
+	if err != nil {
+		return err
+	}
+	subscribeCommand.City = *validatedCity
+	return nil
+}
+
+func (s *SubscriptionService) createSubscription(
+	ctx context.Context,
+	subscribeCommand *command.SubscribeCommand,
+) (*domain.Subscription, error) {
+	newSubscription, err := domain.NewSubscription(
+		subscribeCommand.Email,
+		subscribeCommand.City,
+		domain.Frequency(subscribeCommand.Frequency),
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "Invalid input", http.StatusBadRequest)
+	}
+
+	savedSubscription, err := s.repository.Create(ctx, newSubscription)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create subscription", http.StatusInternalServerError)
+	}
+
+	return savedSubscription, nil
+}
+
+func (s *SubscriptionService) sendConfirmationEmail(
+	subscription *domain.Subscription,
+) error {
+	confirmationEmail := &email.ConfirmationEmail{
+		To:        subscription.Email,
+		City:      subscription.City,
+		Frequency: string(subscription.Frequency),
+		Url:       s.host + "api/confirm/" + subscription.Token,
+	}
+	if err := s.sender.ConfirmationEmail(confirmationEmail); err != nil {
+		return err
+	}
+
+	return nil
 }
