@@ -23,7 +23,7 @@ integration:
 .PHONY: e2e
 e2e: create-network start-scripts start-app
 	@echo "Running E2E Tests"
-	$(GO_TEST) -tags=$(E2E_TAG) ./...
+	$(GO_TEST) -tags=$(E2E_TAG) ./internal/...
 
 .PHONY: start-scripts
 start-scripts:
