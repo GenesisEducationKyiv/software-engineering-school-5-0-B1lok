@@ -17,6 +17,7 @@ type EmailConfig struct {
 	Port     int
 	Username string
 	Password string
+	From     string
 }
 
 type Sender struct {
@@ -52,7 +53,7 @@ func (s *Sender) sendEmail(templatePath, to, subject string, data any) error {
 	}
 
 	message := gomail.NewMessage()
-	message.SetHeader("From", s.config.Username)
+	message.SetHeader("From", s.config.From)
 	message.SetHeader("To", to)
 	message.SetHeader("Subject", subject)
 	message.SetBody("text/html", htmlBody)

@@ -12,26 +12,26 @@ import (
 )
 
 type CityValidator struct {
+	apiUrl string
 	apiKey string
 	client *http.Client
 }
 
-func NewCityValidator(apiKey string) *CityValidator {
+func NewCityValidator(apiUrl, apiKey string) *CityValidator {
 	client := &http.Client{
 		Timeout: defaultTimeout,
 	}
-	return &CityValidator{apiKey: apiKey, client: client}
+	return &CityValidator{apiUrl: apiUrl, apiKey: apiKey, client: client}
 }
 
 const (
-	baseUrl        = "http://api.weatherapi.com/v1"
 	searchEndpoint = "/search.json"
 	defaultTimeout = 10 * time.Second
 )
 
 func (c CityValidator) Validate(city string) (*string, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s",
-		baseUrl,
+		c.apiUrl,
 		searchEndpoint,
 		c.apiKey,
 		url.QueryEscape(city),

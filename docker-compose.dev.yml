@@ -1,0 +1,9 @@
+services:
+  server:
+    env_file:
+      - path: .env
+        required: true
+
+networks:
+  app-network:
+    driver: bridge
