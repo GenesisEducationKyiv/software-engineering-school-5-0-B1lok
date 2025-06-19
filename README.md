@@ -119,34 +119,19 @@ DB_PASSWORD=postgres
 DB_NAME=weather
 SERVER_HOST=http://localhost:8080/
 SERVER_PORT=8080
+WEATHER_API_URL=your-api-url
 WEATHER_API_KEY=your-api-key
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
-EMAIL_USERNAME=your-email-adress
+EMAIL_USERNAME=your-email-adress-for-authentication
 EMAIL_PASSWORD=your-api-key
+EMAIL_FROM=your-email-adress
 ```
 ### Step 3: Start with Docker Compose
 
 Build and run the application using Docker Compose:
 
 ```bash
-docker-compose up --build
+docker compose -f docker-compose.base.yml -f docker-compose.dev.yml up --build
 ```
 Application now available at http://localhost:8080/ with a custom subscription page
-
-### Running Tests with Testcontainers locally
-
-To run integration tests that use **Testcontainers**, make sure the following prerequisites are met:
-
-#### Prerequisites
-
-- Docker is installed and running on your machine.
-- Go is installed (version 1.20+ recommended).
-
-#### Run the Tests
-
-Use the following command to run all tests, including those using Testcontainers:
-
-```bash
-go test ./... -v
-```
