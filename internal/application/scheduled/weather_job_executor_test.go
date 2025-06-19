@@ -1,16 +1,19 @@
+//go:build unit
+// +build unit
+
 //nolint:gosec
+
 package scheduled
 
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	"math/rand"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/google/uuid"
 
 	"weather-api/pkg/errors"
 
