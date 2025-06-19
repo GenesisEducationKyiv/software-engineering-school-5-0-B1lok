@@ -2,7 +2,7 @@ UNIT_TAG=unit
 INTEGRATION_TAG=integration
 E2E_TAG=e2e
 
-DOCKER_COMPOSE_SCRIPTS = docker-compose -f scripts/docker-compose.yml
+DOCKER_COMPOSE_SCRIPTS = docker compose -f scripts/docker-compose.yml
 DOCKER_COMPOSE_TEST_APP = docker compose -f docker-compose.base.yml -f docker-compose.test.yml
 NETWORK_NAME=app-network
 
