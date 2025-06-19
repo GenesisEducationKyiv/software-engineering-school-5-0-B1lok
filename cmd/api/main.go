@@ -48,10 +48,10 @@ func run() error {
 	// Initialize infrastructure components
 	emailSender := email.NewEmailSender(email.CreateConfig(cfg))
 	txManager := middleware.NewTxManager(db)
-	cityValidatorImpl := cityValidator.NewCityValidator(cfg.WeatherApiKey)
+	cityValidatorImpl := cityValidator.NewCityValidator(cfg.WeatherApiUrl, cfg.WeatherApiKey)
 
 	// Initialize repositories
-	weatherRepo := weatherapi.NewWeatherRepository(cfg.WeatherApiKey)
+	weatherRepo := weatherapi.NewWeatherRepository(cfg.WeatherApiUrl, cfg.WeatherApiKey)
 	subscriptionRepo := postgresconnector.NewSubscriptionRepository(db)
 
 	// Initialize services

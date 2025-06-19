@@ -14,20 +14,20 @@ import (
 )
 
 type WeatherRepository struct {
-	apiKey string
-	client *http.Client
-	clock  Clock
+	apiKey  string
+	client  *http.Client
+	clock   Clock
+	baseUrl string
 }
 
-func NewWeatherRepository(apiKey string) *WeatherRepository {
+func NewWeatherRepository(apiUrl string, apiKey string) *WeatherRepository {
 	client := &http.Client{
 		Timeout: defaultTimeout,
 	}
-	return &WeatherRepository{apiKey: apiKey, client: client, clock: SystemClock{}}
+	return &WeatherRepository{apiKey: apiKey, client: client, clock: SystemClock{}, baseUrl: apiUrl}
 }
 
 const (
-	baseUrl          = "http://api.weatherapi.com/v1"
 	currentEndpoint  = "/current.json"
 	forecastEndpoint = "/forecast.json"
 	defaultTimeout   = 10 * time.Second
@@ -39,7 +39,7 @@ func (r *WeatherRepository) SetClock(clock Clock) {
 
 func (r *WeatherRepository) GetWeather(ctx context.Context, city string) (*domain.Weather, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s",
-		baseUrl,
+		r.baseUrl,
 		currentEndpoint,
 		r.apiKey,
 		url.QueryEscape(city),
@@ -70,7 +70,7 @@ func (r *WeatherRepository) GetDailyForecast(
 	ctx context.Context, city string,
 ) (*domain.WeatherDaily, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s&days=1",
-		baseUrl,
+		r.baseUrl,
 		forecastEndpoint,
 		r.apiKey,
 		url.QueryEscape(city),
@@ -100,7 +100,7 @@ func (r *WeatherRepository) GetHourlyForecast(
 	ctx context.Context, city string,
 ) (*domain.WeatherHourly, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s&days=1",
-		baseUrl,
+		r.baseUrl,
 		forecastEndpoint,
 		r.apiKey,
 		url.QueryEscape(city),
