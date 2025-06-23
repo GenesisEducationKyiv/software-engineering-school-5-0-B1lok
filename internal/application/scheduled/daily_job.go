@@ -8,7 +8,6 @@ import (
 
 type WeatherDailyNotifier interface {
 	NotifyDailyWeather(
-		ctx context.Context,
 		subscription *domain.Subscription,
 		weatherDaily *domain.WeatherDaily,
 	) error
@@ -36,7 +35,7 @@ func NewDailyWeatherUpdateJob(
 		subscription *domain.Subscription,
 		weatherDaily *domain.WeatherDaily,
 	) error {
-		return notifier.NotifyDailyWeather(ctx, subscription, weatherDaily)
+		return notifier.NotifyDailyWeather(subscription, weatherDaily)
 	}
 
 	exec := NewWeatherJobExecutor(

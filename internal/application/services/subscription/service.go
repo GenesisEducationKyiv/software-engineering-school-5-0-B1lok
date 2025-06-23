@@ -1,20 +1,19 @@
-package services
+package subscription
 
 import (
 	"context"
 	"net/http"
 
 	"weather-api/internal/application/command"
-	"weather-api/internal/application/email"
 	"weather-api/internal/domain"
 	"weather-api/pkg/errors"
 )
 
-type ConfirmationSender interface {
-	ConfirmationEmail(email *email.ConfirmationEmail) error
+type ConfirmationNotifier interface {
+	NotifyConfirmation(subscription *domain.Subscription) error
 }
 
-type SubscriptionRepository interface {
+type Repository interface {
 	Create(ctx context.Context, subscription *domain.Subscription) (*domain.Subscription, error)
 	ExistByLookup(ctx context.Context, lookup *domain.SubscriptionLookup) (bool, error)
 	Update(ctx context.Context, subscription *domain.Subscription) (*domain.Subscription, error)
@@ -26,24 +25,24 @@ type CityValidator interface {
 	Validate(city string) (*string, error)
 }
 
-type SubscriptionService struct {
-	repository SubscriptionRepository
+type Service struct {
+	repository Repository
 	validator  CityValidator
-	sender     ConfirmationSender
+	notifier   ConfirmationNotifier
 	host       string
 }
 
-func NewSubscriptionService(
-	repository SubscriptionRepository,
+func NewService(
+	repository Repository,
 	validator CityValidator,
-	sender ConfirmationSender, host string,
-) *SubscriptionService {
-	return &SubscriptionService{
-		repository: repository, validator: validator, sender: sender, host: host,
+	notifier ConfirmationNotifier, host string,
+) *Service {
+	return &Service{
+		repository: repository, validator: validator, notifier: notifier, host: host,
 	}
 }
 
-func (s *SubscriptionService) Subscribe(
+func (s *Service) Subscribe(
 	ctx context.Context, subscribeCommand *command.SubscribeCommand,
 ) error {
 	if err := s.setValidatedCity(subscribeCommand); err != nil {
@@ -63,14 +62,14 @@ func (s *SubscriptionService) Subscribe(
 	if err != nil {
 		return err
 	}
-	if err := s.sendConfirmationEmail(newSubscription); err != nil {
+	if err := s.notifier.NotifyConfirmation(newSubscription); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (s *SubscriptionService) Confirm(ctx context.Context, token string) error {
+func (s *Service) Confirm(ctx context.Context, token string) error {
 	subscription, err := s.repository.FindByToken(ctx, token)
 	if err != nil {
 		return errors.Wrap(err, "failed to find subscription", http.StatusInternalServerError)
@@ -89,7 +88,7 @@ func (s *SubscriptionService) Confirm(ctx context.Context, token string) error {
 	return err
 }
 
-func (s *SubscriptionService) Unsubscribe(ctx context.Context, token string) error {
+func (s *Service) Unsubscribe(ctx context.Context, token string) error {
 	subscription, err := s.repository.FindByToken(ctx, token)
 	if err != nil {
 		return errors.Wrap(err, "failed to find subscription", http.StatusInternalServerError)
@@ -102,7 +101,7 @@ func (s *SubscriptionService) Unsubscribe(ctx context.Context, token string) err
 	return s.repository.Delete(ctx, subscription.ID)
 }
 
-func (s *SubscriptionService) setValidatedCity(subscribeCommand *command.SubscribeCommand) error {
+func (s *Service) setValidatedCity(subscribeCommand *command.SubscribeCommand) error {
 	validatedCity, err := s.validator.Validate(subscribeCommand.City)
 	if err != nil {
 		return err
@@ -111,7 +110,7 @@ func (s *SubscriptionService) setValidatedCity(subscribeCommand *command.Subscri
 	return nil
 }
 
-func (s *SubscriptionService) createSubscription(
+func (s *Service) createSubscription(
 	ctx context.Context,
 	subscribeCommand *command.SubscribeCommand,
 ) (*domain.Subscription, error) {
@@ -130,20 +129,4 @@ func (s *SubscriptionService) createSubscription(
 	}
 
 	return savedSubscription, nil
-}
-
-func (s *SubscriptionService) sendConfirmationEmail(
-	subscription *domain.Subscription,
-) error {
-	confirmationEmail := &email.ConfirmationEmail{
-		To:        subscription.Email,
-		City:      subscription.City,
-		Frequency: string(subscription.Frequency),
-		Url:       s.host + "api/confirm/" + subscription.Token,
-	}
-	if err := s.sender.ConfirmationEmail(confirmationEmail); err != nil {
-		return err
-	}
-
-	return nil
 }
