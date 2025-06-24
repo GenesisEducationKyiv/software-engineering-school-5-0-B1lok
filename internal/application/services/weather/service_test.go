@@ -1,3 +1,6 @@
+//go:build unit
+// +build unit
+
 package weather
 
 import (
@@ -13,7 +16,7 @@ import (
 )
 
 const (
-	ValidatedCity = "Berlin"
+	validatedCity = "Berlin"
 )
 
 func TestWeatherService_GetWeather_Success(t *testing.T) {
@@ -27,9 +30,9 @@ func TestWeatherService_GetWeather_Success(t *testing.T) {
 		Description: "Partly Cloudy",
 	}
 
-	mockRepo.On("GetWeather", ctx, ValidatedCity).Return(mockWeather, nil)
+	mockRepo.On("GetWeather", ctx, validatedCity).Return(mockWeather, nil)
 
-	result, err := service.GetWeather(ctx, ValidatedCity)
+	result, err := service.GetWeather(ctx, validatedCity)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)

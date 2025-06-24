@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/current.json",
+    "queryParameters": {
+      "q": {
+        "equalTo": "InvalidCity"
+      },
+      "key": {
+        "equalTo": "test_key"
+      }
+    }
+  },
+  "response": {
+    "status": 400,
+    "bodyFileName": "error-response.json",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

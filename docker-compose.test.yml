@@ -1,0 +1,9 @@
+services:
+  server:
+    env_file:
+      - path: ./.env.test
+        required: true
+
+networks:
+  app-network:
+    external: true

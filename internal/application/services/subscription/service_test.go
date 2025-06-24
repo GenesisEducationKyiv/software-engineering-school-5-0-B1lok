@@ -1,3 +1,6 @@
+//go:build unit
+// +build unit
+
 package subscription
 
 import (
@@ -50,7 +53,7 @@ func TestSubscriptionService_Subscribe_Success(t *testing.T) {
 	}
 	mockRepo.On("ExistByLookup", ctx, lookup).Return(false, nil)
 
-	mockRepo.On("Create", ctx, mock.AnythingOfType("*models.Subscription")).Return(subscription, nil)
+	mockRepo.On("Create", ctx, mock.AnythingOfType("*domain.Subscription")).Return(subscription, nil)
 
 	mockNotifier.On("NotifyConfirmation", mock.AnythingOfType("*domain.Subscription")).Return(nil)
 
@@ -91,6 +94,7 @@ func TestSubscriptionService_Subscribe_InvalidCity(t *testing.T) {
 }
 
 func TestSubscriptionService_Subscribe_AlreadyExists(t *testing.T) {
+
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
 	mockNotifier := new(mocks.MockNotifier)
@@ -231,7 +235,7 @@ func TestSubscriptionService_Subscribe_CreateError(t *testing.T) {
 	mockRepo.On("ExistByLookup", ctx, lookup).Return(false, nil)
 
 	createErr := errors.New("Database error", http.StatusInternalServerError)
-	mockRepo.On("Create", ctx, mock.AnythingOfType("*models.Subscription")).Return(nil, createErr)
+	mockRepo.On("Create", ctx, mock.AnythingOfType("*domain.Subscription")).Return(nil, createErr)
 
 	err := service.Subscribe(ctx, cmd)
 
@@ -275,7 +279,7 @@ func TestSubscriptionService_Subscribe_EmailError(t *testing.T) {
 		City:      ValidatedCity,
 		Frequency: domain.Frequency("daily"),
 	}
-	mockRepo.On("Create", ctx, mock.AnythingOfType("*models.Subscription")).Return(subscription, nil)
+	mockRepo.On("Create", ctx, mock.AnythingOfType("*domain.Subscription")).Return(subscription, nil)
 
 	emailErr := errors.New("Failed to send email", http.StatusInternalServerError)
 	mockNotifier.On(
@@ -323,7 +327,7 @@ func TestSubscriptionService_Confirm_Success(t *testing.T) {
 		Confirmed: true,
 	}
 	mockRepo.On(
-		"Update", ctx, mock.AnythingOfType("*models.Subscription"),
+		"Update", ctx, mock.AnythingOfType("*domain.Subscription"),
 	).Return(updatedSubscription, nil)
 
 	err := service.Confirm(ctx, token)
@@ -406,7 +410,7 @@ func TestSubscriptionService_Confirm_UpdateError(t *testing.T) {
 	mockRepo.On("FindByToken", ctx, token).Return(subscription, nil)
 
 	updateErr := errors.New("Update failed", http.StatusInternalServerError)
-	mockRepo.On("Update", ctx, mock.AnythingOfType("*models.Subscription")).Return(nil, updateErr)
+	mockRepo.On("Update", ctx, mock.AnythingOfType("*domain.Subscription")).Return(nil, updateErr)
 
 	err := service.Confirm(ctx, token)
 

@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/search.json",
+    "queryParameters": {
+      "q": {
+        "equalTo": "Kyiv"
+      },
+      "key": {
+        "equalTo": "test_key"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "search-response.json",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}
