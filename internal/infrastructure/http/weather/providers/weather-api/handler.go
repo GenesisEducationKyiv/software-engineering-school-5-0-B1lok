@@ -9,22 +9,29 @@ import (
 	"net/url"
 	"time"
 
+	"weather-api/internal/infrastructure/http/weather"
+
 	"weather-api/internal/domain"
 	"weather-api/pkg/errors"
 )
 
-type WeatherRepository struct {
+type Handler struct {
 	apiKey  string
 	client  *http.Client
 	clock   Clock
 	baseUrl string
+	next    weather.Handler
 }
 
-func NewWeatherRepository(apiUrl string, apiKey string) *WeatherRepository {
+func NewHandler(apiUrl string, apiKey string) *Handler {
 	client := &http.Client{
 		Timeout: defaultTimeout,
 	}
-	return &WeatherRepository{apiKey: apiKey, client: client, clock: SystemClock{}, baseUrl: apiUrl}
+	return &Handler{apiKey: apiKey, client: client, clock: SystemClock{}, baseUrl: apiUrl}
+}
+
+func (r *Handler) SetNext(next weather.Handler) {
+	r.next = next
 }
 
 const (
@@ -33,11 +40,11 @@ const (
 	defaultTimeout   = 10 * time.Second
 )
 
-func (r *WeatherRepository) SetClock(clock Clock) {
+func (r *Handler) SetClock(clock Clock) {
 	r.clock = clock
 }
 
-func (r *WeatherRepository) GetWeather(ctx context.Context, city string) (*domain.Weather, error) {
+func (r *Handler) GetWeather(ctx context.Context, city string) (*domain.Weather, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s",
 		r.baseUrl,
 		currentEndpoint,
@@ -66,7 +73,7 @@ func (r *WeatherRepository) GetWeather(ctx context.Context, city string) (*domai
 	return toWeather(&apiResponse), nil
 }
 
-func (r *WeatherRepository) GetDailyForecast(
+func (r *Handler) GetDailyForecast(
 	ctx context.Context, city string,
 ) (*domain.WeatherDaily, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s&days=1",
@@ -96,7 +103,7 @@ func (r *WeatherRepository) GetDailyForecast(
 	return toWeatherDaily(&apiResponse), nil
 }
 
-func (r *WeatherRepository) GetHourlyForecast(
+func (r *Handler) GetHourlyForecast(
 	ctx context.Context, city string,
 ) (*domain.WeatherHourly, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s&days=1",
@@ -126,7 +133,7 @@ func (r *WeatherRepository) GetHourlyForecast(
 	return toWeatherHourly(&apiResponse, r.clock.Now()), nil
 }
 
-func (r *WeatherRepository) requestWeatherAPI(
+func (r *Handler) requestWeatherAPI(
 	ctx context.Context, endpoint string,
 ) (*http.Response, error) {
 	resp, err := r.client.Get(endpoint)
@@ -136,7 +143,7 @@ func (r *WeatherRepository) requestWeatherAPI(
 	return resp, nil
 }
 
-func (r *WeatherRepository) handleAPIResponse(resp *http.Response) error {
+func (r *Handler) handleAPIResponse(resp *http.Response) error {
 	if resp.StatusCode != http.StatusOK {
 		var errResp struct {
 			Error struct {

@@ -8,8 +8,11 @@ import (
 	"os/signal"
 	"syscall"
 
+	"weather-api/internal/infrastructure/http/weather"
+	weatherapi "weather-api/internal/infrastructure/http/weather/providers/weather-api"
+
 	"weather-api/internal/application/services/subscription"
-	"weather-api/internal/application/services/weather"
+	appWeather "weather-api/internal/application/services/weather"
 
 	appEmail "weather-api/internal/application/email"
 	"weather-api/internal/application/scheduled"
@@ -17,7 +20,6 @@ import (
 	postgresconnector "weather-api/internal/infrastructure/db/postgres"
 	"weather-api/internal/infrastructure/email"
 	cityValidator "weather-api/internal/infrastructure/http/validator"
-	weatherapi "weather-api/internal/infrastructure/http/weather-api"
 	"weather-api/internal/interface/rest"
 	"weather-api/pkg/middleware"
 
@@ -53,12 +55,13 @@ func run() error {
 	cityValidatorImpl := cityValidator.NewCityValidator(cfg.WeatherApiUrl, cfg.WeatherApiKey)
 
 	// Initialize repositories
-	weatherRepo := weatherapi.NewWeatherRepository(cfg.WeatherApiUrl, cfg.WeatherApiKey)
+	weatherApiHandler := weatherapi.NewHandler(cfg.WeatherApiUrl, cfg.WeatherApiKey)
+	weatherRepository := weather.NewRepository(weatherApiHandler)
 	subscriptionRepo := postgresconnector.NewSubscriptionRepository(db)
 
 	// Initialize services
 	emailNotifier := appEmail.NewNotifier(cfg.ServerHost, emailSender)
-	weatherService := weather.NewService(weatherRepo)
+	weatherService := appWeather.NewService(weatherRepository)
 	subscriptionService := subscription.NewService(
 		subscriptionRepo, cityValidatorImpl, emailNotifier, cfg.ServerHost)
 
@@ -69,9 +72,9 @@ func run() error {
 	// Initialize workers
 	jobManager := scheduled.NewJobManager(ctx)
 	jobManager.RegisterJob(scheduled.NewHourlyWeatherUpdateJob(
-		weatherRepo, subscriptionRepo, emailNotifier))
+		weatherRepository, subscriptionRepo, emailNotifier))
 	jobManager.RegisterJob(scheduled.NewDailyWeatherUpdateJob(
-		weatherRepo, subscriptionRepo, emailNotifier))
+		weatherRepository, subscriptionRepo, emailNotifier))
 	go jobManager.StartScheduler()
 
 	// Initialize router
