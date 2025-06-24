@@ -8,7 +8,6 @@ import (
 
 type WeatherHourlyNotifier interface {
 	NotifyHourlyWeather(
-		ctx context.Context,
 		subscription *domain.Subscription,
 		weatherHourly *domain.WeatherHourly,
 	) error
@@ -36,7 +35,7 @@ func NewHourlyWeatherUpdateJob(
 		subscription *domain.Subscription,
 		weatherHourly *domain.WeatherHourly,
 	) error {
-		return notifier.NotifyHourlyWeather(ctx, subscription, weatherHourly)
+		return notifier.NotifyHourlyWeather(subscription, weatherHourly)
 	}
 
 	exec := NewWeatherJobExecutor(

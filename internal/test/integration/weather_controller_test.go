@@ -9,9 +9,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"weather-api/internal/application/services/weather"
+
 	"weather-api/internal/interface/rest"
 
-	"weather-api/internal/application/services"
 	"weather-api/internal/test/stubs"
 	"weather-api/pkg/middleware"
 
@@ -28,7 +29,7 @@ type WeatherControllerTestSuite struct {
 
 func (suite *WeatherControllerTestSuite) SetupSuite() {
 	weatherRepo := stubs.NewWeatherRepositoryStub()
-	weatherService := services.NewWeatherService(weatherRepo)
+	weatherService := weather.NewService(weatherRepo)
 	weatherController := rest.NewWeatherController(weatherService)
 
 	router := gin.Default()

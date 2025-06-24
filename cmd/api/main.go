@@ -8,9 +8,11 @@ import (
 	"os/signal"
 	"syscall"
 
+	"weather-api/internal/application/services/subscription"
+	"weather-api/internal/application/services/weather"
+
 	appEmail "weather-api/internal/application/email"
 	"weather-api/internal/application/scheduled"
-	"weather-api/internal/application/services"
 	"weather-api/internal/config"
 	postgresconnector "weather-api/internal/infrastructure/db/postgres"
 	"weather-api/internal/infrastructure/email"
@@ -55,10 +57,10 @@ func run() error {
 	subscriptionRepo := postgresconnector.NewSubscriptionRepository(db)
 
 	// Initialize services
-	weatherService := services.NewWeatherService(weatherRepo)
-	subscriptionService := services.NewSubscriptionService(
-		subscriptionRepo, cityValidatorImpl, emailSender, cfg.ServerHost)
 	emailNotifier := appEmail.NewNotifier(cfg.ServerHost, emailSender)
+	weatherService := weather.NewService(weatherRepo)
+	subscriptionService := subscription.NewService(
+		subscriptionRepo, cityValidatorImpl, emailNotifier, cfg.ServerHost)
 
 	// Initialize controllers
 	weatherController := rest.NewWeatherController(weatherService)

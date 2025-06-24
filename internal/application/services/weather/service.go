@@ -1,4 +1,4 @@
-package services
+package weather
 
 import (
 	"context"
@@ -8,19 +8,19 @@ import (
 	"weather-api/internal/domain"
 )
 
-type WeatherReader interface {
+type Reader interface {
 	GetWeather(ctx context.Context, city string) (*domain.Weather, error)
 }
 
-type WeatherService struct {
-	weatherRepository WeatherReader
+type Service struct {
+	weatherRepository Reader
 }
 
-func NewWeatherService(weatherRepository WeatherReader) *WeatherService {
-	return &WeatherService{weatherRepository: weatherRepository}
+func NewService(weatherRepository Reader) *Service {
+	return &Service{weatherRepository: weatherRepository}
 }
 
-func (s *WeatherService) GetWeather(
+func (s *Service) GetWeather(
 	ctx context.Context, city string,
 ) (*query.WeatherQueryResult, error) {
 	weather, err := s.weatherRepository.GetWeather(ctx, city)

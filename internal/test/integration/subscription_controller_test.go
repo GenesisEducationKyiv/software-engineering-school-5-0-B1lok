@@ -15,7 +15,9 @@ import (
 	"strings"
 	"testing"
 
-	"weather-api/internal/application/services"
+	appEmail "weather-api/internal/application/email"
+	"weather-api/internal/application/services/subscription"
+
 	"weather-api/internal/config"
 	"weather-api/internal/domain"
 	postgresconnector "weather-api/internal/infrastructure/db/postgres"
@@ -54,6 +56,7 @@ func (suite *SubscriptionControllerTestSuite) SetupSuite() {
 		DBHost:     host,
 		DBPort:     mappedPort.Port(),
 		DBName:     "testdb",
+		ServerHost: "localhost",
 	}
 
 	db, err := postgresconnector.ConnectDB(cfg)
@@ -61,11 +64,11 @@ func (suite *SubscriptionControllerTestSuite) SetupSuite() {
 	suite.DB = db
 	postgresconnector.RunMigrationsWithPath(cfg, getMigrationPath())
 
-	cityValidatorImpl := stubs.NewCityValidatorStub()
-	sender := stubs.NewSenderStub()
+	cityValidator := stubs.NewCityValidatorStub()
+	emailNotifier := appEmail.NewNotifier(cfg.ServerHost, stubs.NewSenderStub())
 	subscriptionRepo := postgresconnector.NewSubscriptionRepository(db)
-	subscriptionService := services.NewSubscriptionService(
-		subscriptionRepo, cityValidatorImpl, sender, cfg.ServerHost,
+	subscriptionService := subscription.NewService(
+		subscriptionRepo, cityValidator, emailNotifier, cfg.ServerHost,
 	)
 	subscriptionController := rest.NewSubscriptionController(subscriptionService)
 	txManager := middleware.NewTxManager(db)
