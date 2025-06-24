@@ -2,62 +2,47 @@ package scheduled
 
 import (
 	"context"
-	"fmt"
 
-	"weather-api/internal/application/email"
-	"weather-api/internal/domain/models"
-	"weather-api/internal/domain/repositories"
+	"weather-api/internal/domain"
 )
 
+type WeatherDailyNotifier interface {
+	NotifyDailyWeather(
+		subscription *domain.Subscription,
+		weatherDaily *domain.WeatherDaily,
+	) error
+}
+
+type WeatherDailyReader interface {
+	GetDailyForecast(ctx context.Context, city string) (*domain.WeatherDaily, error)
+}
+
 type DailyWeatherUpdateJob struct {
-	executor *WeatherJobExecutor[*models.WeatherDaily, *DailyEmailTask]
-}
-
-type DailyEmailTask struct {
-	subscription *models.Subscription
-	weatherDaily *models.WeatherDaily
-	host         string
-}
-
-func (t *DailyEmailTask) GetSubscription() *models.Subscription {
-	return t.subscription
+	executor *WeatherJobExecutor[*domain.WeatherDaily]
 }
 
 func NewDailyWeatherUpdateJob(
-	weatherRepo repositories.WeatherRepository,
-	subscriptionRepo repositories.SubscriptionRepository,
-	sender email.Sender,
-	host string,
+	weatherRepo WeatherDailyReader,
+	subscriptionRepo GroupedSubscriptionReader,
+	notifier WeatherDailyNotifier,
 ) *DailyWeatherUpdateJob {
-	getWeatherFunc := func(ctx context.Context, city string) (*models.WeatherDaily, error) {
+	getWeatherFunc := func(ctx context.Context, city string) (*domain.WeatherDaily, error) {
 		return weatherRepo.GetDailyForecast(ctx, city)
 	}
 
-	createTaskFunc := func(subscription *models.Subscription,
-		weather *models.WeatherDaily,
-	) *DailyEmailTask {
-		return &DailyEmailTask{
-			subscription: subscription,
-			weatherDaily: weather,
-			host:         host,
-		}
-	}
-
-	sendEmailFunc := func(task *DailyEmailTask) error {
-		return sender.WeatherDailyEmail(
-			toWeatherDailyEmail(task.subscription, task.weatherDaily, task.host),
-		)
+	notifyFunc := func(
+		ctx context.Context,
+		subscription *domain.Subscription,
+		weatherDaily *domain.WeatherDaily,
+	) error {
+		return notifier.NotifyDailyWeather(subscription, weatherDaily)
 	}
 
 	exec := NewWeatherJobExecutor(
-		weatherRepo,
 		subscriptionRepo,
-		sender,
-		host,
 		"daily",
 		getWeatherFunc,
-		createTaskFunc,
-		sendEmailFunc,
+		notifyFunc,
 	)
 
 	return &DailyWeatherUpdateJob{
@@ -75,17 +60,4 @@ func (d *DailyWeatherUpdateJob) Schedule() string {
 
 func (d *DailyWeatherUpdateJob) Run(ctx context.Context) error {
 	return d.executor.Execute(ctx)
-}
-
-func toWeatherDailyEmail(
-	subscription *models.Subscription,
-	weatherDaily *models.WeatherDaily,
-	host string,
-) *email.WeatherDailyEmail {
-	return &email.WeatherDailyEmail{
-		To:             subscription.Email,
-		Frequency:      string(subscription.Frequency),
-		WeatherDaily:   weatherDaily,
-		UnsubscribeUrl: fmt.Sprintf("%sapi/unsubscribe/%s", host, subscription.Token),
-	}
 }

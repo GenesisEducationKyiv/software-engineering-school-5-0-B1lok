@@ -1,4 +1,4 @@
-package models
+package domain
 
 type Weather struct {
 	Temperature float64

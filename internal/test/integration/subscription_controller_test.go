@@ -12,12 +12,13 @@ import (
 	"strings"
 	"testing"
 
-	"weather-api/internal/interface/rest"
+	appEmail "weather-api/internal/application/email"
+	"weather-api/internal/application/services/subscription"
 
-	"weather-api/internal/application/services"
 	"weather-api/internal/config"
-	"weather-api/internal/domain/models"
+	"weather-api/internal/domain"
 	postgresconnector "weather-api/internal/infrastructure/db/postgres"
+	"weather-api/internal/interface/rest"
 	"weather-api/internal/test/containers"
 	"weather-api/internal/test/stubs"
 	"weather-api/pkg/middleware"
@@ -52,6 +53,7 @@ func (suite *SubscriptionControllerTestSuite) SetupSuite() {
 		DBHost:     host,
 		DBPort:     mappedPort.Port(),
 		DBName:     "testdb",
+		ServerHost: "localhost",
 	}
 
 	db, err := postgresconnector.ConnectDB(cfg)
@@ -59,11 +61,11 @@ func (suite *SubscriptionControllerTestSuite) SetupSuite() {
 	suite.DB = db
 	postgresconnector.RunMigrationsWithPath(cfg, getMigrationPath())
 
-	cityValidatorImpl := stubs.NewCityValidatorStub()
-	sender := stubs.NewSenderStub()
+	cityValidator := stubs.NewCityValidatorStub()
+	emailNotifier := appEmail.NewNotifier(cfg.ServerHost, stubs.NewSenderStub())
 	subscriptionRepo := postgresconnector.NewSubscriptionRepository(db)
-	subscriptionService := services.NewSubscriptionService(
-		subscriptionRepo, cityValidatorImpl, sender, cfg.ServerHost,
+	subscriptionService := subscription.NewService(
+		subscriptionRepo, cityValidator, emailNotifier, cfg.ServerHost,
 	)
 	subscriptionController := rest.NewSubscriptionController(subscriptionService)
 	txManager := middleware.NewTxManager(db)
@@ -106,7 +108,7 @@ func (suite *SubscriptionControllerTestSuite) TestSubscribe() {
 	suite.Equal(http.StatusOK, resp.Code)
 
 	var count int64
-	err := suite.DB.Model(&models.Subscription{}).
+	err := suite.DB.Model(&domain.Subscription{}).
 		Where("email = ?", "test@example.com").Count(&count).Error
 	suite.Require().NoError(err)
 	suite.Equal(int64(1), count)
@@ -153,7 +155,7 @@ func (suite *SubscriptionControllerTestSuite) TestSubscribe_EmailAlreadySubscrib
 
 func (suite *SubscriptionControllerTestSuite) TestConfirmSubscription() {
 	token := "test-token"
-	suite.insertTestData(&models.Subscription{
+	suite.insertTestData(&domain.Subscription{
 		Email:     "test@example.com",
 		City:      "London",
 		Frequency: "daily",
@@ -173,7 +175,7 @@ func (suite *SubscriptionControllerTestSuite) TestConfirmSubscription() {
 	suite.Require().NoError(err)
 	suite.Contains(response, "message")
 
-	var subscription models.Subscription
+	var subscription domain.Subscription
 	err = suite.DB.Where("token = ?", token).First(&subscription).Error
 	suite.Require().NoError(err)
 	suite.True(subscription.Confirmed)
@@ -204,7 +206,7 @@ func (suite *SubscriptionControllerTestSuite) TestConfirmSubscription_TokenNotFo
 
 func (suite *SubscriptionControllerTestSuite) TestUnsubscribe() {
 	token := "test-token"
-	suite.insertTestData(&models.Subscription{
+	suite.insertTestData(&domain.Subscription{
 		Email:     "test@example.com",
 		City:      "London",
 		Frequency: "daily",
@@ -225,7 +227,7 @@ func (suite *SubscriptionControllerTestSuite) TestUnsubscribe() {
 	suite.Contains(response, "message")
 
 	var count int64
-	err = suite.DB.Model(&models.Subscription{}).Where("token = ?", token).Count(&count).Error
+	err = suite.DB.Model(&domain.Subscription{}).Where("token = ?", token).Count(&count).Error
 	suite.Require().NoError(err)
 	suite.Equal(int64(0), count)
 }

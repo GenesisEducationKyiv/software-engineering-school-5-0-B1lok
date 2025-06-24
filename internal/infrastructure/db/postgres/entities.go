@@ -3,14 +3,14 @@ package postgres
 import (
 	"time"
 
-	"weather-api/internal/domain/models"
+	"weather-api/internal/domain"
 )
 
 type SubscriptionEntity struct {
 	ID        uint `gorm:"primaryKey"`
 	Email     string
 	City      string
-	Frequency models.Frequency `gorm:"type:frequency_enum"`
+	Frequency domain.Frequency `gorm:"type:frequency_enum"`
 	Token     string
 	Confirmed bool
 	CreatedAt time.Time

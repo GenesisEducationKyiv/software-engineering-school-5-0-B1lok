@@ -3,21 +3,21 @@ package weather_api
 import (
 	"time"
 
-	"weather-api/internal/domain/models"
+	"weather-api/internal/domain"
 )
 
-func toWeather(weatherRepositoryResponse *WeatherRepositoryResponse) *models.Weather {
-	return &models.Weather{
+func toWeather(weatherRepositoryResponse *WeatherRepositoryResponse) *domain.Weather {
+	return &domain.Weather{
 		Temperature: weatherRepositoryResponse.Current.TempC,
 		Humidity:    weatherRepositoryResponse.Current.Humidity,
 		Description: weatherRepositoryResponse.Current.Condition.Text,
 	}
 }
 
-func toWeatherDaily(response *WeatherDailyResponse) *models.WeatherDaily {
+func toWeatherDaily(response *WeatherDailyResponse) *domain.WeatherDaily {
 	first := response.Forecast.Forecastday[0]
 
-	return &models.WeatherDaily{
+	return &domain.WeatherDaily{
 		Location:   response.Location.Name,
 		Date:       first.Date,
 		MaxTempC:   first.Day.MaxtempC,
@@ -32,11 +32,11 @@ func toWeatherDaily(response *WeatherDailyResponse) *models.WeatherDaily {
 	}
 }
 
-func toWeatherHourly(response *WeatherHourlyResponse, targetTime time.Time) *models.WeatherHourly {
+func toWeatherHourly(response *WeatherHourlyResponse, targetTime time.Time) *domain.WeatherHourly {
 	currentTime := targetTime.Truncate(time.Hour).Format("2006-01-02 15:04")
 	for _, hour := range response.Forecast.Forecastday[0].Hour {
 		if hour.Time == currentTime {
-			return &models.WeatherHourly{
+			return &domain.WeatherHourly{
 				Location:   response.Location.Name,
 				Time:       hour.Time,
 				TempC:      hour.TempC,
