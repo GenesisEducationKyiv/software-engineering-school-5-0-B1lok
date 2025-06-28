@@ -32,7 +32,7 @@ func TestWeatherService_GetWeather_Success(t *testing.T) {
 
 	mockRepo.On("GetWeather", ctx, validatedCity).Return(mockWeather, nil)
 
-	result, err := service.GetWeather(ctx, validatedCity)
+	result, err := service.GetWeather(validatedCity)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -51,7 +51,7 @@ func TestWeatherService_GetWeather_EmptyCity(t *testing.T) {
 
 	mockRepo.On("GetWeather", ctx, city).Return(nil, expectedErr)
 
-	result, err := service.GetWeather(ctx, city)
+	result, err := service.GetWeather(city)
 
 	assert.Error(t, err)
 	assert.Equal(t, expectedErr, err)
