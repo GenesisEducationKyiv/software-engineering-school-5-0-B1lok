@@ -34,6 +34,9 @@ RUN adduser \
     --no-create-home \
     --uid "${UID}" \
     appuser
+
+RUN mkdir /logs && chown -R appuser:appuser /logs
+
 USER appuser
 
 COPY --from=build /bin/server /bin/

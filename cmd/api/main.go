@@ -8,18 +8,22 @@ import (
 	"os/signal"
 	"syscall"
 
-	"weather-api/internal/infrastructure/http/weather"
+	geocodingapi "weather-api/internal/infrastructure/http/validator/providers/geo-coding-api"
+	weatherapisearch "weather-api/internal/infrastructure/http/validator/providers/weather-api-search"
 	weatherapi "weather-api/internal/infrastructure/http/weather/providers/weather-api"
+	"weather-api/pkg/logger"
 
 	"weather-api/internal/application/services/subscription"
 	appWeather "weather-api/internal/application/services/weather"
+	"weather-api/internal/infrastructure/http/weather"
+	open_meteo "weather-api/internal/infrastructure/http/weather/providers/open-meteo"
 
 	appEmail "weather-api/internal/application/email"
 	"weather-api/internal/application/scheduled"
 	"weather-api/internal/config"
 	postgresconnector "weather-api/internal/infrastructure/db/postgres"
 	"weather-api/internal/infrastructure/email"
-	cityValidator "weather-api/internal/infrastructure/http/validator"
+	"weather-api/internal/infrastructure/http/validator"
 	"weather-api/internal/interface/rest"
 	"weather-api/pkg/middleware"
 
@@ -49,21 +53,36 @@ func run() error {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
+	// Initialize logger
+	fileLogger, err := logger.NewFileLogger("logs/weather-api.log")
+	if err != nil {
+		cancel()
+		return fmt.Errorf("failed to open log file: %w", err)
+	}
+
 	// Initialize infrastructure components
 	emailSender := email.NewEmailSender(email.CreateConfig(cfg))
 	txManager := middleware.NewTxManager(db)
-	cityValidatorImpl := cityValidator.NewCityValidator(cfg.WeatherApiUrl, cfg.WeatherApiKey)
+	geoCodingApiClient := geocodingapi.NewClient(cfg.GeoCodingUrl, fileLogger)
+	weatherApiSearchClient := weatherapisearch.NewClient(
+		cfg.WeatherApiUrl, cfg.WeatherApiKey, fileLogger)
+	geoCodingApiHandler := validator.NewHandler(geoCodingApiClient)
+	geoCodingApiHandler.SetNext(weatherApiSearchClient)
+	cityValidator := validator.NewCityValidator(geoCodingApiHandler)
 
 	// Initialize repositories
-	weatherApiHandler := weatherapi.NewHandler(cfg.WeatherApiUrl, cfg.WeatherApiKey)
-	weatherRepository := weather.NewRepository(weatherApiHandler)
+	weatherApiClient := weatherapi.NewClient(cfg.WeatherApiUrl, cfg.WeatherApiKey, fileLogger)
+	openMeteoApiClient := open_meteo.NewClient(cfg.OpenMeteoUrl, cfg.GeoCodingUrl, fileLogger)
+	openMeteoApiHandler := weather.NewHandler(openMeteoApiClient)
+	openMeteoApiHandler.SetNext(weatherApiClient)
+	weatherRepository := weather.NewRepository(openMeteoApiHandler)
 	subscriptionRepo := postgresconnector.NewSubscriptionRepository(db)
 
 	// Initialize services
 	emailNotifier := appEmail.NewNotifier(cfg.ServerHost, emailSender)
 	weatherService := appWeather.NewService(weatherRepository)
 	subscriptionService := subscription.NewService(
-		subscriptionRepo, cityValidatorImpl, emailNotifier, cfg.ServerHost)
+		subscriptionRepo, cityValidator, emailNotifier, cfg.ServerHost)
 
 	// Initialize controllers
 	weatherController := rest.NewWeatherController(weatherService)

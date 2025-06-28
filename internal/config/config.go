@@ -22,6 +22,8 @@ type Config struct {
 	EmailUser     string `mapstructure:"EMAIL_USERNAME"`
 	EmailPassword string `mapstructure:"EMAIL_PASSWORD"`
 	EmailFrom     string `mapstructure:"EMAIL_FROM"`
+	OpenMeteoUrl  string `mapstructure:"OPEN_METEO_URL"`
+	GeoCodingUrl  string `mapstructure:"GEO_CODING_URL"`
 }
 
 func LoadConfig() (Config, error) {
@@ -57,4 +59,6 @@ func bindAllEnvVars() {
 	_ = viper.BindEnv("EMAIL_USERNAME")
 	_ = viper.BindEnv("EMAIL_PASSWORD")
 	_ = viper.BindEnv("EMAIL_FROM")
+	_ = viper.BindEnv("OPEN_METEO_URL")
+	_ = viper.BindEnv("GEO_CODING_URL")
 }

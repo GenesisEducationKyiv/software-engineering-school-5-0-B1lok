@@ -28,15 +28,15 @@ type WeatherJobExecutor[T WeatherData] struct {
 	subscriptionRepo GroupedSubscriptionReader
 	workerCount      int
 	frequency        domain.Frequency
-	getWeatherFunc   func(context.Context, string) (T, error)
-	notifyFunc       func(context.Context, *domain.Subscription, T) error
+	getWeatherFunc   func(string) (T, error)
+	notifyFunc       func(*domain.Subscription, T) error
 }
 
 func NewWeatherJobExecutor[T WeatherData](
 	subscriptionRepo GroupedSubscriptionReader,
 	frequency domain.Frequency,
-	getWeatherFunc func(context.Context, string) (T, error),
-	notifyFunc func(context.Context, *domain.Subscription, T) error,
+	getWeatherFunc func(string) (T, error),
+	notifyFunc func(*domain.Subscription, T) error,
 ) *WeatherJobExecutor[T] {
 	return &WeatherJobExecutor[T]{
 		subscriptionRepo: subscriptionRepo,
@@ -105,7 +105,7 @@ func (e *WeatherJobExecutor[T]) dispatchTasks(
 			return ctx.Err()
 		}
 
-		weatherData, err := e.getWeatherFunc(ctx, group.City)
+		weatherData, err := e.getWeatherFunc(group.City)
 		if err != nil {
 			log.Printf("Failed to fetch weather for city %s: %v", group.City, err)
 			continue
@@ -163,7 +163,7 @@ func (e *WeatherJobExecutor[T]) worker(
 		case <-ctx.Done():
 			return
 		default:
-			err := e.notifyFunc(ctx, task.Subscription, task.WeatherData)
+			err := e.notifyFunc(task.Subscription, task.WeatherData)
 			if err != nil {
 				select {
 				case errChan <- err:

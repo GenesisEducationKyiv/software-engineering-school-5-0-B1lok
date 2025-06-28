@@ -4,33 +4,16 @@
 package weather_api
 
 import (
-	"context"
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"
-	"net/http/httptest"
-	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+	appHttp "weather-api/internal/infrastructure/http"
 )
-
-func mockHTTPClient(response string, statusCode int) *http.Client {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(statusCode)
-		_, _ = w.Write([]byte(response))
-	}))
-
-	return &http.Client{
-		Transport: &http.Transport{
-			Proxy: func(req *http.Request) (*url.URL, error) {
-				return url.Parse(server.URL)
-			},
-		},
-	}
-}
 
 type MockClock struct{}
 
@@ -49,10 +32,10 @@ func loadJSONFile(t *testing.T, filename string) string {
 func TestGetWeather(t *testing.T) {
 	mockResponse := loadJSONFile(t, "current_weather_response.json")
 
-	repo := NewHandler("http://mocked-weather-api.com", "dummy-api-key")
-	repo.client = mockHTTPClient(mockResponse, http.StatusOK)
+	repo := NewClient("http://mocked-weather-api.com", "dummy-api-key", appHttp.NoOpLogger{})
+	repo.client = appHttp.MockHTTPClient(appHttp.MockResponse{Body: mockResponse, StatusCode: http.StatusOK})
 
-	weather, err := repo.GetWeather(context.Background(), "London")
+	weather, err := repo.GetWeather("London")
 
 	require.NoError(t, err)
 	require.NotNil(t, weather)
@@ -63,10 +46,10 @@ func TestGetWeather(t *testing.T) {
 func TestGetDailyForecast(t *testing.T) {
 	mockResponse := loadJSONFile(t, "forecast_response.json")
 
-	repo := NewHandler("http://mocked-weather-api.com", "dummy-api-key")
-	repo.client = mockHTTPClient(mockResponse, http.StatusOK)
+	repo := NewClient("http://mocked-weather-api.com", "dummy-api-key", appHttp.NoOpLogger{})
+	repo.client = appHttp.MockHTTPClient(appHttp.MockResponse{Body: mockResponse, StatusCode: http.StatusOK})
 
-	forecast, err := repo.GetDailyForecast(context.Background(), "London")
+	forecast, err := repo.GetDailyForecast("London")
 
 	require.NoError(t, err)
 	require.NotNil(t, forecast)
@@ -79,11 +62,11 @@ func TestGetDailyForecast(t *testing.T) {
 func TestGetHourlyForecast(t *testing.T) {
 	mockResponse := loadJSONFile(t, "forecast_response.json")
 
-	repo := NewHandler("http://mocked-weather-api.com", "dummy-api-key")
-	repo.client = mockHTTPClient(mockResponse, http.StatusOK)
+	repo := NewClient("http://mocked-weather-api.com", "dummy-api-key", appHttp.NoOpLogger{})
+	repo.client = appHttp.MockHTTPClient(appHttp.MockResponse{Body: mockResponse, StatusCode: http.StatusOK})
 	repo.SetClock(MockClock{})
 
-	forecast, err := repo.GetHourlyForecast(context.Background(), "London")
+	forecast, err := repo.GetHourlyForecast("London")
 
 	require.NoError(t, err)
 	require.NotNil(t, forecast)
@@ -96,10 +79,10 @@ func TestGetHourlyForecast(t *testing.T) {
 func TestHandleAPIErrorResponse(t *testing.T) {
 	mockErrorResponse := loadJSONFile(t, "not_found_response.json")
 
-	repo := NewHandler("http://mocked-weather-api.com", "dummy-api-key")
-	repo.client = mockHTTPClient(mockErrorResponse, http.StatusBadRequest)
+	repo := NewClient("http://mocked-weather-api.com", "dummy-api-key", appHttp.NoOpLogger{})
+	repo.client = appHttp.MockHTTPClient(appHttp.MockResponse{Body: mockErrorResponse, StatusCode: http.StatusBadRequest})
 
-	_, err := repo.GetWeather(context.Background(), "NonExistentCity")
+	_, err := repo.GetWeather("NonExistentCity")
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "City not found")
