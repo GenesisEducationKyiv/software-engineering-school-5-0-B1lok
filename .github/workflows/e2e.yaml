@@ -20,6 +20,11 @@ jobs:
       - name: Set up Docker
         uses: docker/setup-buildx-action@v3
 
+      - name: Prepare logs directory with correct permissions
+        run: |
+            mkdir -p ./logs
+            chmod 777 ./logs
+
       - name: Set up Docker Buildx
         run: make install-playwright
 
