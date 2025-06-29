@@ -4,7 +4,6 @@
 package weather
 
 import (
-	"context"
 	"net/http"
 	"testing"
 
@@ -22,7 +21,6 @@ const (
 func TestWeatherService_GetWeather_Success(t *testing.T) {
 	mockRepo := new(mocks.MockWeatherRepository)
 	service := NewService(mockRepo)
-	ctx := context.Background()
 
 	mockWeather := &domain.Weather{
 		Temperature: 20.5,
@@ -30,7 +28,7 @@ func TestWeatherService_GetWeather_Success(t *testing.T) {
 		Description: "Partly Cloudy",
 	}
 
-	mockRepo.On("GetWeather", ctx, validatedCity).Return(mockWeather, nil)
+	mockRepo.On("GetWeather", validatedCity).Return(mockWeather, nil)
 
 	result, err := service.GetWeather(validatedCity)
 
@@ -45,11 +43,10 @@ func TestWeatherService_GetWeather_Success(t *testing.T) {
 func TestWeatherService_GetWeather_EmptyCity(t *testing.T) {
 	mockRepo := new(mocks.MockWeatherRepository)
 	service := NewService(mockRepo)
-	ctx := context.Background()
 	city := "invalid city123"
 	expectedErr := errors.New("invalid city123", http.StatusNotFound)
 
-	mockRepo.On("GetWeather", ctx, city).Return(nil, expectedErr)
+	mockRepo.On("GetWeather", city).Return(nil, expectedErr)
 
 	result, err := service.GetWeather(city)
 

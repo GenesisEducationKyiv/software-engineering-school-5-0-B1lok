@@ -38,8 +38,8 @@ start-app:
 .PHONY: stop
 stop:
 	@echo "Stopping and cleaning up Docker containers..."
-	$(DOCKER_COMPOSE_SCRIPTS) down -v
-	$(DOCKER_COMPOSE_TEST_APP) down -v
+	$(DOCKER_COMPOSE_SCRIPTS) down --volumes --remove-orphans
+	$(DOCKER_COMPOSE_TEST_APP) down --volumes --remove-orphans
 
 .PHONY: install-playwright
 install-playwright:
