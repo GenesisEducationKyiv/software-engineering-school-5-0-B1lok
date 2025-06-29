@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -16,7 +17,7 @@ import (
 	"weather-api/internal/application/services/subscription"
 	appWeather "weather-api/internal/application/services/weather"
 	"weather-api/internal/infrastructure/http/weather"
-	open_meteo "weather-api/internal/infrastructure/http/weather/providers/open-meteo"
+	openmeteo "weather-api/internal/infrastructure/http/weather/providers/open-meteo"
 
 	appEmail "weather-api/internal/application/email"
 	"weather-api/internal/application/scheduled"
@@ -72,7 +73,7 @@ func run() error {
 
 	// Initialize repositories
 	weatherApiClient := weatherapi.NewClient(cfg.WeatherApiUrl, cfg.WeatherApiKey, fileLogger)
-	openMeteoApiClient := open_meteo.NewClient(cfg.OpenMeteoUrl, cfg.GeoCodingUrl, fileLogger)
+	openMeteoApiClient := openmeteo.NewClient(cfg.OpenMeteoUrl, cfg.GeoCodingUrl, fileLogger)
 	openMeteoApiHandler := weather.NewHandler(openMeteoApiClient)
 	openMeteoApiHandler.SetNext(weatherApiClient)
 	weatherRepository := weather.NewRepository(openMeteoApiHandler)
@@ -115,6 +116,10 @@ func run() error {
 		api.GET("/confirm/:token", subscriptionController.Confirm)
 		api.GET("/unsubscribe/:token", subscriptionController.Unsubscribe)
 	}
+
+	router.GET("/healthz", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
 
 	go func() {
 		<-ctx.Done()

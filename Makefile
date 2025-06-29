@@ -21,7 +21,7 @@ integration:
 	$(GO_TEST) -tags=$(INTEGRATION_TAG) ./...
 
 .PHONY: e2e
-e2e: create-network start-scripts start-app
+e2e: create-network start-scripts start-app health-check
 	@echo "Running E2E Tests"
 	$(GO_TEST) -tags=$(E2E_TAG) ./internal/...
 
@@ -50,3 +50,17 @@ install-playwright:
 create-network:
 	@echo "Creating network $(NETWORK_NAME) if it does not exist..."
 	docker network ls | grep -q $(NETWORK_NAME) || docker network create $(NETWORK_NAME)
+
+.PHONY: health-check
+health-check:
+	@echo "Waiting for server to be ready on route /healthz..."
+	@timeout=60; \
+	while [ $$timeout -gt 0 ] && ! curl -sSf http://localhost:8080/healthz > /dev/null; do \
+		echo "Still waiting for server to be ready..."; \
+		sleep 2; \
+		timeout=$$((timeout - 2)); \
+	done; \
+	if [ $$timeout -le 0 ]; then \
+		echo "Server did not become ready in time"; \
+		exit 1; \
+	fi
