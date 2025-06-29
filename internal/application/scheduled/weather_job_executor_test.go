@@ -31,9 +31,7 @@ type mockWeatherFunc struct {
 	weatherError error
 }
 
-func (m *mockWeatherFunc) getWeather(
-	ctx context.Context, city string,
-) (*domain.WeatherHourly, error) {
+func (m *mockWeatherFunc) getWeather(city string) (*domain.WeatherHourly, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.callCount++
@@ -67,9 +65,7 @@ type mockNotifyFunc struct {
 	notifyError           error
 }
 
-func (m *mockNotifyFunc) notify(
-	ctx context.Context, sub *domain.Subscription, weather *domain.WeatherHourly,
-) error {
+func (m *mockNotifyFunc) notify(sub *domain.Subscription, weather *domain.WeatherHourly) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.callCount++

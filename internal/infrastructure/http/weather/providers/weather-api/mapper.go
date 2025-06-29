@@ -28,7 +28,7 @@ func toWeatherDaily(response *WeatherDailyResponse) *domain.WeatherDaily {
 		WillItSnow: first.Day.DailyWillItSnow == 1,
 		ChanceSnow: first.Day.DailyChanceOfSnow,
 		Condition:  first.Day.Condition.Text,
-		Icon:       first.Day.Condition.Icon,
+		Icon:       "https:" + first.Day.Condition.Icon,
 	}
 }
 
@@ -45,7 +45,7 @@ func toWeatherHourly(response *WeatherHourlyResponse, targetTime time.Time) *dom
 				WillItSnow: hour.WillItSnow == 1,
 				ChanceSnow: hour.ChanceOfSnow,
 				Condition:  hour.Condition.Text,
-				Icon:       hour.Condition.Icon,
+				Icon:       "https:" + hour.Condition.Icon,
 			}
 		}
 	}

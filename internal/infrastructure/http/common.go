@@ -1,0 +1,75 @@
+package http
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
+	"time"
+
+	"weather-api/pkg/errors"
+)
+
+func Get(client *http.Client, endpoint string) (*http.Response, error) {
+	resp, err := client.Get(endpoint)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to connect to API", http.StatusServiceUnavailable)
+	}
+	return resp, nil
+}
+
+type Clock interface {
+	Now() time.Time
+}
+
+type SystemClock struct{}
+
+func (SystemClock) Now() time.Time {
+	return time.Now()
+}
+
+func MockHTTPClient(response MockResponse) *http.Client {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(response.StatusCode)
+		_, _ = w.Write([]byte(response.Body))
+	}))
+
+	return &http.Client{
+		Transport: &http.Transport{
+			Proxy: func(req *http.Request) (*url.URL, error) {
+				return url.Parse(server.URL)
+			},
+		},
+	}
+}
+
+func MockHTTPClientWithResponses(responses map[string]MockResponse) *http.Client {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestURL := r.URL.String()
+
+		for urlPattern, response := range responses {
+			if strings.Contains(requestURL, urlPattern) {
+				w.WriteHeader(response.StatusCode)
+				_, _ = w.Write([]byte(response.Body))
+				return
+			}
+		}
+	}))
+
+	return &http.Client{
+		Transport: &http.Transport{
+			Proxy: func(req *http.Request) (*url.URL, error) {
+				return url.Parse(server.URL)
+			},
+		},
+	}
+}
+
+type MockResponse struct {
+	Body       string
+	StatusCode int
+}
+
+type NoOpLogger struct{}
+
+func (NoOpLogger) LogResponse(_ string, _ *http.Response) {}
