@@ -4,12 +4,12 @@
 package weather
 
 import (
-	"net/http"
 	"testing"
 
 	"weather-api/internal/domain"
+	internalErrors "weather-api/internal/errors"
 	"weather-api/internal/test/mocks"
-	"weather-api/pkg/errors"
+	pkgErrors "weather-api/pkg/errors"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -44,7 +44,7 @@ func TestWeatherService_GetWeather_EmptyCity(t *testing.T) {
 	mockRepo := new(mocks.MockWeatherRepository)
 	service := NewService(mockRepo)
 	city := "invalid city123"
-	expectedErr := errors.New("invalid city123", http.StatusNotFound)
+	expectedErr := pkgErrors.New(internalErrors.ErrInvalidInput, "invalid city123")
 
 	mockRepo.On("GetWeather", city).Return(nil, expectedErr)
 

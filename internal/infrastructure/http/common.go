@@ -7,13 +7,14 @@ import (
 	"strings"
 	"time"
 
-	"weather-api/pkg/errors"
+	internalErrors "weather-api/internal/errors"
+	pkgErrors "weather-api/pkg/errors"
 )
 
 func Get(client *http.Client, endpoint string) (*http.Response, error) {
 	resp, err := client.Get(endpoint)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to connect to API", http.StatusServiceUnavailable)
+		return nil, pkgErrors.New(internalErrors.ErrInternal, "failed to connect to API")
 	}
 	return resp, nil
 }

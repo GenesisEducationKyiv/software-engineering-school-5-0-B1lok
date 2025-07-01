@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"net/http"
 
 	"weather-api/internal/application/email"
-	"weather-api/pkg/errors"
+	internalErrors "weather-api/internal/errors"
+	pkgErrors "weather-api/pkg/errors"
 
 	"gopkg.in/gomail.v2"
 )
@@ -60,7 +60,7 @@ func (s *Sender) sendEmail(templatePath, to, subject string, data any) error {
 
 	if err := s.dialer.DialAndSend(message); err != nil {
 		fmt.Println(err.Error())
-		return errors.New("Failed to send email", http.StatusInternalServerError)
+		return pkgErrors.New(internalErrors.ErrInternal, "Failed to send email")
 	}
 
 	return nil
@@ -70,13 +70,13 @@ func renderTemplate(templatePath string, data any) (string, error) {
 	tmpl, err := template.ParseFiles(templatePath)
 	if err != nil {
 		fmt.Printf("Template parse error: %v\n", err)
-		return "", errors.New("Failed to parse template", http.StatusInternalServerError)
+		return "", pkgErrors.New(internalErrors.ErrInternal, "Failed to parse template")
 	}
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, data); err != nil {
 		fmt.Printf("Template execute error: %v\n", err)
-		return "", errors.New("Failed to render template", http.StatusInternalServerError)
+		return "", pkgErrors.New(internalErrors.ErrInternal, "Failed to render template")
 	}
 
 	return buf.String(), nil

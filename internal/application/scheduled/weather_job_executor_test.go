@@ -10,12 +10,12 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"math/rand"
-	"net/http"
 	"sync"
 	"testing"
 	"time"
 
-	"weather-api/pkg/errors"
+	internalErrors "weather-api/internal/errors"
+	pkgErrors "weather-api/pkg/errors"
 
 	"weather-api/internal/domain"
 	"weather-api/internal/test/mocks"
@@ -242,7 +242,7 @@ func TestWeatherJobExecutor_Execute_Success(t *testing.T) {
 func TestWeatherJobExecutor_Execute_RepositoryError(t *testing.T) {
 	ctx := context.Background()
 	frequency := domain.Frequency("hourly")
-	expectedError := errors.New("repository error", http.StatusInternalServerError)
+	expectedError := pkgErrors.New(internalErrors.ErrInternal, "repository error")
 
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockRepo.On("FindGroupedSubscriptions", mock.Anything, &frequency).
@@ -287,7 +287,7 @@ func TestWeatherJobExecutor_Execute_WeatherAPIError(t *testing.T) {
 		Once()
 
 	mockWeather := &mockWeatherFunc{
-		weatherError: errors.New("weather API error", http.StatusInternalServerError),
+		weatherError: pkgErrors.New(internalErrors.ErrInternal, "weather API error"),
 	}
 
 	mockNotify := &mockNotifyFunc{}
@@ -327,7 +327,7 @@ func TestWeatherJobExecutor_Execute_NotifyError(t *testing.T) {
 	mockWeather := &mockWeatherFunc{}
 
 	mockNotify := &mockNotifyFunc{
-		notifyError: errors.New("notification error", http.StatusInternalServerError),
+		notifyError: pkgErrors.New(internalErrors.ErrInternal, "notification error"),
 	}
 
 	executor := NewWeatherJobExecutor[*domain.WeatherHourly](

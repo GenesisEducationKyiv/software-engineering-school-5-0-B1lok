@@ -3,10 +3,10 @@ package postgres
 import (
 	"context"
 	"errors"
-	"net/http"
 
 	"weather-api/internal/domain"
-	customErrors "weather-api/pkg/errors"
+	internalErrors "weather-api/internal/errors"
+	pkgErrors "weather-api/pkg/errors"
 	"weather-api/pkg/middleware"
 
 	"gorm.io/gorm"
@@ -27,15 +27,15 @@ func (r *SubscriptionRepository) Create(
 	db := r.getDB(ctx)
 
 	if err := db.Create(entity).Error; err != nil {
-		return nil, customErrors.Wrap(
-			err, "failed to create subscription", http.StatusInternalServerError,
+		return nil, pkgErrors.New(
+			internalErrors.ErrInternal, "failed to create subscription",
 		)
 	}
 
 	saved, err := toDomain(entity)
 	if err != nil {
-		return nil, customErrors.Wrap(
-			err, "failed to map subscription entity", http.StatusInternalServerError,
+		return nil, pkgErrors.New(
+			internalErrors.ErrInternal, "failed to map subscription entity",
 		)
 	}
 	return saved, nil
@@ -51,8 +51,8 @@ func (r *SubscriptionRepository) ExistByLookup(
 		Where("email = ? AND city = ? AND frequency = ?", lookup.Email, lookup.City, lookup.Frequency).
 		Count(&count).Error
 	if err != nil {
-		return false, customErrors.Wrap(
-			err, "failed to check if email exists", http.StatusInternalServerError,
+		return false, pkgErrors.New(
+			internalErrors.ErrInternal, "failed to check if email exists",
 		)
 	}
 	return count > 0, nil
@@ -65,13 +65,13 @@ func (r *SubscriptionRepository) Update(
 	db := r.getDB(ctx)
 	result := db.Save(entity)
 	if result.Error != nil {
-		return nil, customErrors.Wrap(
-			result.Error, "failed to update subscription", http.StatusInternalServerError,
+		return nil, pkgErrors.New(
+			internalErrors.ErrInternal, "failed to update subscription",
 		)
 	}
 
 	if result.RowsAffected == 0 {
-		return nil, customErrors.New("subscription not found", http.StatusNotFound)
+		return nil, pkgErrors.New(internalErrors.ErrNotFound, "subscription not found")
 	}
 
 	return toDomain(entity)
@@ -81,13 +81,13 @@ func (r *SubscriptionRepository) Delete(ctx context.Context, id uint) error {
 	db := r.getDB(ctx)
 	result := db.Delete(&SubscriptionEntity{}, id)
 	if result.Error != nil {
-		return customErrors.Wrap(
-			result.Error, "failed to delete subscription", http.StatusInternalServerError,
+		return pkgErrors.New(
+			internalErrors.ErrInternal, "failed to delete subscription",
 		)
 	}
 
 	if result.RowsAffected == 0 {
-		return customErrors.New("subscription not found", http.StatusNotFound)
+		return pkgErrors.New(internalErrors.ErrNotFound, "subscription not found")
 	}
 
 	return nil
@@ -104,9 +104,8 @@ func (r *SubscriptionRepository) FindByToken(
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
-		return nil, customErrors.Wrap(
-			result.Error, "failed to find subscription by token",
-			http.StatusInternalServerError,
+		return nil, pkgErrors.New(
+			internalErrors.ErrInternal, "failed to find subscription by token",
 		)
 	}
 
@@ -123,8 +122,8 @@ func (r *SubscriptionRepository) FindGroupedSubscriptions(
 		Where("confirmed = ? AND frequency = ?", true, frequency).
 		Find(&subscriptions).Error
 	if err != nil {
-		return nil, customErrors.Wrap(
-			err, "failed to find confirmed subscriptions", http.StatusInternalServerError,
+		return nil, pkgErrors.New(
+			internalErrors.ErrInternal, "failed to find confirmed subscriptions",
 		)
 	}
 

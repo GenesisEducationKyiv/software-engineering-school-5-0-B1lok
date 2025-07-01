@@ -1,10 +1,9 @@
 package stubs
 
 import (
-	"net/http"
-
 	"weather-api/internal/domain"
-	"weather-api/pkg/errors"
+	internalErrors "weather-api/internal/errors"
+	pkgErrors "weather-api/pkg/errors"
 )
 
 type WeatherRepositoryStub struct {
@@ -26,7 +25,7 @@ func (s *WeatherRepositoryStub) GetWeather(city string) (*domain.Weather, error)
 		return s.GetWeatherFn(city)
 	}
 	if city == "InvalidCity" {
-		return nil, errors.New("City not found", http.StatusNotFound)
+		return nil, pkgErrors.New(internalErrors.ErrNotFound, "City not found")
 	}
 	return &domain.Weather{
 		Temperature: 20.5,

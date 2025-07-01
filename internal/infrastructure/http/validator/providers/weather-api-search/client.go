@@ -9,8 +9,9 @@ import (
 	"strings"
 	"time"
 
+	internalErrors "weather-api/internal/errors"
 	appHttp "weather-api/internal/infrastructure/http"
-	"weather-api/pkg/errors"
+	pkgErrors "weather-api/pkg/errors"
 )
 
 type Logger interface {
@@ -56,20 +57,20 @@ func (h *Client) Validate(city string) (*string, error) {
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("failed to validate city: non-200 response",
-			http.StatusInternalServerError,
+		return nil, pkgErrors.New(
+			internalErrors.ErrInternal, "failed to validate city: non-200 response",
 		)
 	}
 
 	var results []cityResult
 	if err := json.NewDecoder(resp.Body).Decode(&results); err != nil {
-		return nil, errors.Wrap(err, "failed to parse city validation response",
-			http.StatusInternalServerError,
+		return nil, pkgErrors.New(
+			internalErrors.ErrInternal, "failed to parse city validation response",
 		)
 	}
 
 	if len(results) == 0 || !strings.EqualFold(results[0].Name, city) {
-		return nil, errors.New("Invalid input", http.StatusBadRequest)
+		return nil, pkgErrors.New(internalErrors.ErrInvalidInput, "Invalid input")
 	}
 
 	return &results[0].Name, nil

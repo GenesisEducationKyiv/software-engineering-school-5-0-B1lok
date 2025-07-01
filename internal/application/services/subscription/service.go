@@ -2,11 +2,11 @@ package subscription
 
 import (
 	"context"
-	"net/http"
 
 	"weather-api/internal/application/command"
 	"weather-api/internal/domain"
-	"weather-api/pkg/errors"
+	internalErrors "weather-api/internal/errors"
+	pkgErrors "weather-api/pkg/errors"
 )
 
 type ConfirmationNotifier interface {
@@ -50,12 +50,10 @@ func (s *Service) Subscribe(
 	}
 	exists, err := s.repository.ExistByLookup(ctx, subscribeCommand.ToSubscriptionLookup())
 	if err != nil {
-		return errors.Wrap(
-			err, "failed to check if email exists", http.StatusInternalServerError,
-		)
+		return err
 	}
 	if exists {
-		return errors.New("Email already subscribed", http.StatusConflict)
+		return pkgErrors.New(internalErrors.ErrConflict, "Email already subscribed")
 	}
 
 	newSubscription, err := s.createSubscription(ctx, subscribeCommand)
@@ -72,18 +70,18 @@ func (s *Service) Subscribe(
 func (s *Service) Confirm(ctx context.Context, token string) error {
 	subscription, err := s.repository.FindByToken(ctx, token)
 	if err != nil {
-		return errors.Wrap(err, "failed to find subscription", http.StatusInternalServerError)
+		return err
 	}
 
 	if subscription == nil {
-		return errors.New("Token not found", http.StatusNotFound)
+		return pkgErrors.New(internalErrors.ErrNotFound, "Token not found")
 	}
 
 	subscription.SetConfirmed(true)
 
 	_, err = s.repository.Update(ctx, subscription)
 	if err != nil {
-		return errors.Wrap(err, "failed to update subscription", http.StatusInternalServerError)
+		return err
 	}
 	return err
 }
@@ -91,11 +89,11 @@ func (s *Service) Confirm(ctx context.Context, token string) error {
 func (s *Service) Unsubscribe(ctx context.Context, token string) error {
 	subscription, err := s.repository.FindByToken(ctx, token)
 	if err != nil {
-		return errors.Wrap(err, "failed to find subscription", http.StatusInternalServerError)
+		return err
 	}
 
 	if subscription == nil {
-		return errors.New("Token not found", http.StatusNotFound)
+		return pkgErrors.New(internalErrors.ErrNotFound, "Token not found")
 	}
 
 	return s.repository.Delete(ctx, subscription.ID)
@@ -120,12 +118,12 @@ func (s *Service) createSubscription(
 		domain.Frequency(subscribeCommand.Frequency),
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "Invalid input", http.StatusBadRequest)
+		return nil, err
 	}
 
 	savedSubscription, err := s.repository.Create(ctx, newSubscription)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create subscription", http.StatusInternalServerError)
+		return nil, err
 	}
 
 	return savedSubscription, nil

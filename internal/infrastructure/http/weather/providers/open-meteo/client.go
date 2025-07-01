@@ -9,9 +9,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"weather-api/internal/domain"
+	internalErrors "weather-api/internal/errors"
 	appHttp "weather-api/internal/infrastructure/http"
-	"weather-api/pkg/errors"
+	pkgErrors "weather-api/pkg/errors"
 )
 
 type Logger interface {
@@ -60,8 +63,8 @@ func (h *Client) GetWeather(city string) (*domain.Weather, error) {
 	resp, err := appHttp.Get(h.client, h.buildRequestUrl(coords, currentWeatherParams, current))
 	h.logger.LogResponse(providerName, resp)
 	if err != nil {
-		return nil, errors.Wrap(
-			err, "failed to connect to weather API", http.StatusServiceUnavailable,
+		return nil, pkgErrors.New(
+			internalErrors.ErrServiceUnavailable, "failed to connect to weather API",
 		)
 	}
 	defer func() {
@@ -77,7 +80,7 @@ func (h *Client) GetWeather(city string) (*domain.Weather, error) {
 	var apiResponse WeatherResponse
 	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
 		return nil, errors.Wrap(
-			err, "failed to parse weather response", http.StatusInternalServerError,
+			internalErrors.ErrInternal, "failed to parse weather response",
 		)
 	}
 	return toWeather(&apiResponse), nil
@@ -92,8 +95,8 @@ func (h *Client) GetDailyForecast(city string) (*domain.WeatherDaily, error) {
 	resp, err := appHttp.Get(h.client, h.buildRequestUrl(coords, dailyForecastParams, daily))
 	h.logger.LogResponse(providerName, resp)
 	if err != nil {
-		return nil, errors.Wrap(
-			err, "failed to connect to weather API", http.StatusServiceUnavailable,
+		return nil, pkgErrors.New(
+			internalErrors.ErrServiceUnavailable, "failed to connect to weather API",
 		)
 	}
 	defer func() {
@@ -108,8 +111,8 @@ func (h *Client) GetDailyForecast(city string) (*domain.WeatherDaily, error) {
 
 	var apiResponse WeatherDailyResponse
 	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
-		return nil, errors.Wrap(
-			err, "failed to parse weather response", http.StatusInternalServerError,
+		return nil, pkgErrors.New(
+			internalErrors.ErrInternal, "failed to parse weather response",
 		)
 	}
 	return toWeatherDaily(&apiResponse, city), nil
@@ -124,8 +127,8 @@ func (h *Client) GetHourlyForecast(city string) (*domain.WeatherHourly, error) {
 	resp, err := appHttp.Get(h.client, h.buildRequestUrl(coords, hourlyForecastParams, hourly))
 	h.logger.LogResponse(providerName, resp)
 	if err != nil {
-		return nil, errors.Wrap(
-			err, "failed to connect to weather API", http.StatusServiceUnavailable,
+		return nil, pkgErrors.New(
+			internalErrors.ErrServiceUnavailable, "failed to connect to weather API",
 		)
 	}
 	defer func() {
@@ -140,8 +143,8 @@ func (h *Client) GetHourlyForecast(city string) (*domain.WeatherHourly, error) {
 
 	var apiResponse WeatherHourlyResponse
 	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
-		return nil, errors.Wrap(
-			err, "failed to parse weather response", http.StatusInternalServerError,
+		return nil, pkgErrors.New(
+			internalErrors.ErrInternal, "failed to parse weather response",
 		)
 	}
 	return toWeatherHourly(&apiResponse, city, h.clock.Now()), nil
@@ -171,12 +174,12 @@ func (h *Client) fetchCoordinates(city string) (*coordinates, error) {
 
 	var apiResponse GeolocationResponse
 	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
-		return nil, errors.Wrap(
-			err, "failed to parse geolocation response", http.StatusInternalServerError,
+		return nil, pkgErrors.New(
+			internalErrors.ErrInternal, "failed to parse geolocation response",
 		)
 	}
 	if len(apiResponse.Results) == 0 {
-		return nil, errors.New("city not found", http.StatusNotFound)
+		return nil, pkgErrors.New(internalErrors.ErrNotFound, "city not found")
 	}
 
 	return &coordinates{
@@ -192,16 +195,19 @@ func (h *Client) handleAPIResponse(resp *http.Response) error {
 			Reason string `json:"reason"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&errResp); err != nil {
-			return errors.Wrap(
-				err, "failed to parse error response from open-meteo API", http.StatusBadGateway,
+			return pkgErrors.New(
+				internalErrors.ErrServiceUnavailable,
+				"failed to parse error response from open-meteo API",
 			)
 		}
 
 		if errResp.Error {
-			return errors.New(errResp.Reason, http.StatusBadRequest)
+			return pkgErrors.New(internalErrors.ErrInvalidInput, errResp.Reason)
 		}
 
-		return errors.New("unexpected error from open-meteo API", http.StatusBadGateway)
+		return pkgErrors.New(
+			internalErrors.ErrServiceUnavailable, "unexpected error from open-meteo API",
+		)
 	}
 
 	return nil

@@ -6,7 +6,8 @@ import (
 	"weather-api/internal/application/query"
 	"weather-api/internal/interface/rest/dto/mapper"
 
-	"weather-api/pkg/errors"
+	internalErrors "weather-api/internal/errors"
+	pkgErrors "weather-api/pkg/errors"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,7 +29,7 @@ func NewWeatherController(service WeatherService) *WeatherController {
 func (h *WeatherController) GetWeather(c *gin.Context) {
 	city := c.Query("city")
 	if city == "" {
-		c.Error(errors.New("Invalid request", http.StatusBadRequest)) //nolint:errcheck
+		c.Error(pkgErrors.New(internalErrors.ErrInvalidInput, "Invalid request")) //nolint:errcheck
 		return
 	}
 	weather, err := h.service.GetWeather(city)

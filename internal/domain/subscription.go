@@ -1,9 +1,11 @@
 package domain
 
 import (
-	"errors"
 	"net/mail"
 	"time"
+
+	internalErrors "weather-api/internal/errors"
+	pkgErrors "weather-api/pkg/errors"
 
 	"github.com/google/uuid"
 )
@@ -62,15 +64,15 @@ func (s *Subscription) SetConfirmed(confirmed bool) {
 
 func (s *Subscription) validate() error {
 	if _, err := mail.ParseAddress(s.Email); err != nil {
-		return errors.New("invalid email address")
+		return pkgErrors.New(internalErrors.ErrInvalidInput, "invalid email address")
 	}
 
 	if s.City == "" {
-		return errors.New("city is required")
+		return pkgErrors.New(internalErrors.ErrInvalidInput, "city is required")
 	}
 
 	if !isValidFrequency(s.Frequency) {
-		return errors.New("invalid frequency value")
+		return pkgErrors.New(internalErrors.ErrInvalidInput, "invalid frequency value")
 	}
 
 	return nil

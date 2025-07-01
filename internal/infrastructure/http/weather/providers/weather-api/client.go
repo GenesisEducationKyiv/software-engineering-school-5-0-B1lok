@@ -9,8 +9,9 @@ import (
 	"time"
 
 	"weather-api/internal/domain"
+	internalErrors "weather-api/internal/errors"
 	appHttp "weather-api/internal/infrastructure/http"
-	"weather-api/pkg/errors"
+	pkgErrors "weather-api/pkg/errors"
 )
 
 type Logger interface {
@@ -71,8 +72,8 @@ func (r *Client) GetWeather(city string) (*domain.Weather, error) {
 	}
 	var apiResponse WeatherRepositoryResponse
 	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
-		return nil, errors.Wrap(
-			err, "failed to parse weather data", http.StatusInternalServerError,
+		return nil, pkgErrors.New(
+			internalErrors.ErrInternal, "failed to parse weather data",
 		)
 	}
 	return toWeather(&apiResponse), nil
@@ -102,7 +103,9 @@ func (r *Client) GetDailyForecast(city string) (*domain.WeatherDaily, error) {
 
 	var apiResponse WeatherDailyResponse
 	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
-		return nil, errors.Wrap(err, "failed to parse weather data", http.StatusInternalServerError)
+		return nil, pkgErrors.New(
+			internalErrors.ErrInternal, "failed to parse weather data",
+		)
 	}
 	return toWeatherDaily(&apiResponse), nil
 }
@@ -131,7 +134,9 @@ func (r *Client) GetHourlyForecast(city string) (*domain.WeatherHourly, error) {
 
 	var apiResponse WeatherHourlyResponse
 	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
-		return nil, errors.Wrap(err, "failed to parse weather data", http.StatusInternalServerError)
+		return nil, pkgErrors.New(
+			internalErrors.ErrInternal, "failed to parse weather data",
+		)
 	}
 	return toWeatherHourly(&apiResponse, r.clock.Now()), nil
 }
@@ -145,15 +150,19 @@ func (r *Client) handleAPIResponse(resp *http.Response) error {
 			} `json:"error"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&errResp); err != nil {
-			return errors.Wrap(err, "failed to parse error response from weather API", http.StatusBadGateway)
+			return pkgErrors.New(
+				internalErrors.ErrServiceUnavailable,
+				"failed to parse error response from weather API",
+			)
 		}
 
 		if errResp.Error.Code == 1006 {
-			return errors.New("City not found", http.StatusNotFound)
+			return pkgErrors.New(internalErrors.ErrNotFound, "City not found")
 		}
 
-		return errors.New(fmt.Sprintf(
-			"weather API error: %s", errResp.Error.Message), http.StatusBadGateway,
+		return pkgErrors.New(
+			internalErrors.ErrServiceUnavailable,
+			fmt.Sprintf("weather API error: %s", errResp.Error.Message),
 		)
 	}
 

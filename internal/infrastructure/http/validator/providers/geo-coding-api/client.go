@@ -8,8 +8,9 @@ import (
 	"strings"
 	"time"
 
+	internalErrors "weather-api/internal/errors"
 	appHttp "weather-api/internal/infrastructure/http"
-	"weather-api/pkg/errors"
+	pkgErrors "weather-api/pkg/errors"
 )
 
 type Logger interface {
@@ -60,12 +61,12 @@ func (h *Client) Validate(city string) (*string, error) {
 
 	var apiResponse CityResponse
 	if err := json.NewDecoder(resp.Body).Decode(&apiResponse); err != nil {
-		return nil, errors.Wrap(
-			err, "failed to parse geolocation response", http.StatusInternalServerError,
+		return nil, pkgErrors.New(
+			internalErrors.ErrInternal, "failed to parse geolocation response",
 		)
 	}
 	if len(apiResponse.Results) == 0 || !strings.EqualFold(apiResponse.Results[0].Name, city) {
-		return nil, errors.New("Invalid input", http.StatusBadRequest)
+		return nil, pkgErrors.New(internalErrors.ErrInvalidInput, "Invalid city input")
 	}
 
 	return &apiResponse.Results[0].Name, nil
@@ -78,16 +79,19 @@ func (h *Client) handleAPIResponse(resp *http.Response) error {
 			Reason string `json:"reason"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&errResp); err != nil {
-			return errors.Wrap(
-				err, "failed to parse error response from geo-coding API", http.StatusBadGateway,
+			return pkgErrors.New(
+				internalErrors.ErrServiceUnavailable,
+				"failed to parse error response from geo-coding API",
 			)
 		}
 
 		if errResp.Error {
-			return errors.New(errResp.Reason, http.StatusBadRequest)
+			return pkgErrors.New(internalErrors.ErrInvalidInput, errResp.Reason)
 		}
 
-		return errors.New("unexpected error from geo-coding API", http.StatusBadGateway)
+		return pkgErrors.New(
+			internalErrors.ErrServiceUnavailable, "unexpected error from geo-coding API",
+		)
 	}
 
 	return nil
