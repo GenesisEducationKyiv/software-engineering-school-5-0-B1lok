@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	geocodingapi "weather-api/internal/infrastructure/http/validator/providers/geo-coding-api"
 	weatherapisearch "weather-api/internal/infrastructure/http/validator/providers/weather-api-search"
@@ -23,6 +24,11 @@ import (
 	"weather-api/internal/application/scheduled"
 	"weather-api/internal/config"
 	postgresconnector "weather-api/internal/infrastructure/db/postgres"
+	"weather-api/internal/infrastructure/db/redis"
+	cacheValidator "weather-api/internal/infrastructure/db/redis/validator"
+	cacheClient "weather-api/internal/infrastructure/db/redis/weather"
+	cacheOpenmeteo "weather-api/internal/infrastructure/db/redis/weather/providers/open-meteo"
+	cacheWeather "weather-api/internal/infrastructure/db/redis/weather/providers/weather-api"
 	"weather-api/internal/infrastructure/email"
 	"weather-api/internal/infrastructure/http/validator"
 	"weather-api/internal/interface/rest"
@@ -54,6 +60,12 @@ func run() error {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
+	redisClient, err := redis.ConnectRedis(ctx, cfg)
+	if err != nil {
+		cancel()
+		return fmt.Errorf("failed to connect to redis: %w", err)
+	}
+
 	// Initialize logger
 	fileLogger, err := logger.NewFileLogger("logs/weather-api.log")
 	if err != nil {
@@ -64,18 +76,43 @@ func run() error {
 	// Initialize infrastructure components
 	emailSender := email.NewEmailSender(email.CreateConfig(cfg))
 	txManager := middleware.NewTxManager(db)
+
 	geoCodingApiClient := geocodingapi.NewClient(cfg.GeoCodingUrl, fileLogger)
+	cachedGeoCodingClient := cacheValidator.NewProxyClient(
+		geoCodingApiClient,
+		redisClient,
+		24*time.Hour,
+		"geo-coding")
+
 	weatherApiSearchClient := weatherapisearch.NewClient(
 		cfg.WeatherApiUrl, cfg.WeatherApiKey, fileLogger)
-	geoCodingApiHandler := validator.NewHandler(geoCodingApiClient)
-	geoCodingApiHandler.SetNext(weatherApiSearchClient)
+	cachedWeatherApiSearchClient := cacheValidator.NewProxyClient(
+		weatherApiSearchClient,
+		redisClient,
+		24*time.Hour,
+		"weather-search")
+
+	geoCodingApiHandler := validator.NewHandler(cachedGeoCodingClient)
+	geoCodingApiHandler.SetNext(cachedWeatherApiSearchClient)
 	cityValidator := validator.NewCityValidator(geoCodingApiHandler)
 
 	// Initialize repositories
 	weatherApiClient := weatherapi.NewClient(cfg.WeatherApiUrl, cfg.WeatherApiKey, fileLogger)
+	cachedWeatherApiClient := cacheClient.NewProxyClient(
+		weatherApiClient,
+		redisClient,
+		cacheWeather.NewTTLProvider(),
+		"weather-api")
+
 	openMeteoApiClient := openmeteo.NewClient(cfg.OpenMeteoUrl, cfg.GeoCodingUrl, fileLogger)
-	openMeteoApiHandler := weather.NewHandler(openMeteoApiClient)
-	openMeteoApiHandler.SetNext(weatherApiClient)
+	cachedOpenMeteoApi := cacheClient.NewProxyClient(
+		openMeteoApiClient,
+		redisClient,
+		cacheOpenmeteo.NewTTLProvider(),
+		"open-meteo")
+
+	openMeteoApiHandler := weather.NewHandler(cachedOpenMeteoApi)
+	openMeteoApiHandler.SetNext(cachedWeatherApiClient)
 	weatherRepository := weather.NewRepository(openMeteoApiHandler)
 	subscriptionRepo := postgresconnector.NewSubscriptionRepository(db)
 

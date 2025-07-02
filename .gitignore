@@ -3,3 +3,4 @@ app.exe
 .idea
 postgres-data
 logs
+redis-data

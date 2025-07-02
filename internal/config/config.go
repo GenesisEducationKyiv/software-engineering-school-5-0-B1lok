@@ -24,6 +24,9 @@ type Config struct {
 	EmailFrom     string `mapstructure:"EMAIL_FROM"`
 	OpenMeteoUrl  string `mapstructure:"OPEN_METEO_URL"`
 	GeoCodingUrl  string `mapstructure:"GEO_CODING_URL"`
+	RedisAdress   string `mapstructure:"REDIS_ADDRESS"`
+	RedisPassword string `mapstructure:"REDIS_PASSWORD"`
+	RedisDB       int    `mapstructure:"REDIS_DB"`
 }
 
 func LoadConfig() (Config, error) {
@@ -61,4 +64,7 @@ func bindAllEnvVars() {
 	_ = viper.BindEnv("EMAIL_FROM")
 	_ = viper.BindEnv("OPEN_METEO_URL")
 	_ = viper.BindEnv("GEO_CODING_URL")
+	_ = viper.BindEnv("REDIS_ADDRESS")
+	_ = viper.BindEnv("REDIS_PASSWORD")
+	_ = viper.BindEnv("REDIS_DB")
 }
