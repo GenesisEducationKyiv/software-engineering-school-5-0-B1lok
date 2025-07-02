@@ -10,6 +10,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"weather-api/internal/infrastructure/prometheus"
+
 	geocodingapi "weather-api/internal/infrastructure/http/validator/providers/geo-coding-api"
 	weatherapisearch "weather-api/internal/infrastructure/http/validator/providers/weather-api-search"
 	weatherapi "weather-api/internal/infrastructure/http/weather/providers/weather-api"
@@ -77,12 +81,17 @@ func run() error {
 	emailSender := email.NewEmailSender(email.CreateConfig(cfg))
 	txManager := middleware.NewTxManager(db)
 
+	validatorMetrics := prometheus.NewCacheMetrics("weather-api", "validator")
+	weatherMetrics := prometheus.NewCacheMetrics("weather-api", "weather")
+
 	geoCodingApiClient := geocodingapi.NewClient(cfg.GeoCodingUrl, fileLogger)
 	cachedGeoCodingClient := cacheValidator.NewProxyClient(
 		geoCodingApiClient,
 		redisClient,
 		24*time.Hour,
-		"geo-coding")
+		"geo-coding",
+		validatorMetrics,
+	)
 
 	weatherApiSearchClient := weatherapisearch.NewClient(
 		cfg.WeatherApiUrl, cfg.WeatherApiKey, fileLogger)
@@ -90,7 +99,9 @@ func run() error {
 		weatherApiSearchClient,
 		redisClient,
 		24*time.Hour,
-		"weather-search")
+		"weather-search",
+		validatorMetrics,
+	)
 
 	geoCodingApiHandler := validator.NewHandler(cachedGeoCodingClient)
 	geoCodingApiHandler.SetNext(cachedWeatherApiSearchClient)
@@ -102,14 +113,18 @@ func run() error {
 		weatherApiClient,
 		redisClient,
 		cacheWeather.NewTTLProvider(),
-		"weather-api")
+		"weather-api",
+		weatherMetrics,
+	)
 
 	openMeteoApiClient := openmeteo.NewClient(cfg.OpenMeteoUrl, cfg.GeoCodingUrl, fileLogger)
 	cachedOpenMeteoApi := cacheClient.NewProxyClient(
 		openMeteoApiClient,
 		redisClient,
 		cacheOpenmeteo.NewTTLProvider(),
-		"open-meteo")
+		"open-meteo",
+		weatherMetrics,
+	)
 
 	openMeteoApiHandler := weather.NewHandler(cachedOpenMeteoApi)
 	openMeteoApiHandler.SetNext(cachedWeatherApiClient)
@@ -145,6 +160,9 @@ func run() error {
 	router.GET("/", func(c *gin.Context) {
 		c.HTML(200, "index.html", nil)
 	})
+
+	// Metrics endpoint
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	api := router.Group("/api")
 	{

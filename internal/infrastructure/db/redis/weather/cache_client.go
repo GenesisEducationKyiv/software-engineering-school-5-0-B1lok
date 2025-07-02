@@ -3,6 +3,7 @@ package weather
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -18,11 +19,17 @@ type Client interface {
 	GetWeather(city string) (*domain.Weather, error)
 }
 
+type MetricsRecorder interface {
+	CacheHit()
+	CacheMiss()
+}
+
 type ProxyClient struct {
 	delegate Client
 	redis    *redis.Client
 	provider TTLProvider
 	prefix   string
+	recorder MetricsRecorder
 }
 
 type ForecastType string
@@ -42,12 +49,14 @@ func NewProxyClient(
 	redisClient *redis.Client,
 	provider TTLProvider,
 	prefix string,
+	recorder MetricsRecorder,
 ) *ProxyClient {
 	return &ProxyClient{
 		delegate: delegate,
 		redis:    redisClient,
 		provider: provider,
 		prefix:   prefix,
+		recorder: recorder,
 	}
 }
 
@@ -59,8 +68,12 @@ func (c *ProxyClient) GetDailyForecast(city string) (*domain.WeatherDaily, error
 	if err == nil {
 		var cachedWeather WeatherDaily
 		if err := json.Unmarshal([]byte(cached), &cachedWeather); err == nil {
+			c.recorder.CacheHit()
 			return ToDomainWeatherDaily(&cachedWeather), nil
 		}
+	}
+	if errors.Is(err, redis.Nil) {
+		c.recorder.CacheMiss()
 	}
 
 	weather, err := c.delegate.GetDailyForecast(city)
@@ -86,8 +99,12 @@ func (c *ProxyClient) GetHourlyForecast(city string) (*domain.WeatherHourly, err
 	if err == nil {
 		var cachedWeather WeatherHourly
 		if err := json.Unmarshal([]byte(cached), &cachedWeather); err == nil {
+			c.recorder.CacheHit()
 			return ToDomainWeatherHourly(&cachedWeather), nil
 		}
+	}
+	if errors.Is(err, redis.Nil) {
+		c.recorder.CacheMiss()
 	}
 
 	weather, err := c.delegate.GetHourlyForecast(city)
@@ -113,8 +130,12 @@ func (c *ProxyClient) GetWeather(city string) (*domain.Weather, error) {
 	if err == nil {
 		var cachedWeather Weather
 		if err := json.Unmarshal([]byte(cached), &cachedWeather); err == nil {
+			c.recorder.CacheHit()
 			return ToDomainWeather(&cachedWeather), nil
 		}
+	}
+	if errors.Is(err, redis.Nil) {
+		c.recorder.CacheMiss()
 	}
 
 	weather, err := c.delegate.GetWeather(city)

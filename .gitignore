@@ -4,3 +4,5 @@ app.exe
 postgres-data
 logs
 redis-data
+monitoring/prometheus/prometheus-data
+monitoring/grafana/grafana-data

@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -14,11 +15,17 @@ type Client interface {
 	Validate(city string) (*string, error)
 }
 
+type MetricsRecorder interface {
+	CacheHit()
+	CacheMiss()
+}
+
 type ProxyClient struct {
 	delegate Client
 	redis    *redis.Client
 	ttl      time.Duration
 	prefix   string
+	recorder MetricsRecorder
 }
 
 func NewProxyClient(
@@ -26,12 +33,14 @@ func NewProxyClient(
 	redisClient *redis.Client,
 	ttl time.Duration,
 	prefix string,
+	recorder MetricsRecorder,
 ) *ProxyClient {
 	return &ProxyClient{
 		delegate: delegate,
 		redis:    redisClient,
 		ttl:      ttl,
 		prefix:   prefix,
+		recorder: recorder,
 	}
 }
 
@@ -43,10 +52,13 @@ func (c *ProxyClient) Validate(city string) (*string, error) {
 	if err == nil {
 		var cachedCity string
 		if err := json.Unmarshal([]byte(cached), &cachedCity); err == nil {
+			c.recorder.CacheHit()
 			return &cachedCity, nil
 		}
 	}
-
+	if errors.Is(err, redis.Nil) {
+		c.recorder.CacheMiss()
+	}
 	cityValidated, err := c.delegate.Validate(city)
 	if err != nil {
 		return nil, err
