@@ -1,12 +1,16 @@
 package stubs
 
 import (
+	"sync"
+
 	"weather-api/internal/domain"
 	internalErrors "weather-api/internal/errors"
 	pkgErrors "weather-api/pkg/errors"
 )
 
 type WeatherRepositoryStub struct {
+	callCount           map[string]int
+	mu                  sync.RWMutex
 	GetWeatherFn        func(city string) (*domain.Weather, error)
 	GetDailyForecastFn  func(city string) (*domain.WeatherDaily, error)
 	GetHourlyForecastFn func(city string) (*domain.WeatherHourly, error)
@@ -17,10 +21,14 @@ func NewWeatherRepositoryStub() *WeatherRepositoryStub {
 		GetWeatherFn:        nil,
 		GetDailyForecastFn:  nil,
 		GetHourlyForecastFn: nil,
+		callCount:           make(map[string]int),
 	}
 }
 
 func (s *WeatherRepositoryStub) GetWeather(city string) (*domain.Weather, error) {
+	s.mu.Lock()
+	s.callCount[city]++
+	s.mu.Unlock()
 	if s.GetWeatherFn != nil {
 		return s.GetWeatherFn(city)
 	}
@@ -68,4 +76,16 @@ func (s *WeatherRepositoryStub) GetHourlyForecast(city string) (*domain.WeatherH
 		Condition:  "Partly cloudy",
 		Icon:       "cloudy.png",
 	}, nil
+}
+
+func (s *WeatherRepositoryStub) GetCallCount(city string) int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.callCount[city]
+}
+
+func (s *WeatherRepositoryStub) ResetCallCount() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.callCount = make(map[string]int)
 }
