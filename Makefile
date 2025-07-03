@@ -1,6 +1,7 @@
 UNIT_TAG=unit
 INTEGRATION_TAG=integration
 E2E_TAG=e2e
+ARCHITECTURE_TAG=arch
 
 DOCKER_COMPOSE_SCRIPTS = docker compose -f scripts/docker-compose.yml
 DOCKER_COMPOSE_TEST_APP = docker compose -f docker-compose.base.yml -f docker-compose.test.yml
@@ -24,6 +25,11 @@ integration:
 e2e: create-network start-scripts start-app health-check
 	@echo "Running E2E Tests"
 	$(GO_TEST) -tags=$(E2E_TAG) ./internal/...
+
+.PHONY: architecture
+architecture:
+	@echo "Running Architecture Tests"
+	$(GO_TEST) -tags=$(ARCHITECTURE_TAG) ./...
 
 .PHONY: start-scripts
 start-scripts:
