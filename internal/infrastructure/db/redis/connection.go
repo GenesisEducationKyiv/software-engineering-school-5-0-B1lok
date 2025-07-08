@@ -9,13 +9,20 @@ import (
 	"weather-api/internal/config"
 )
 
+const (
+	readTimeout  = 2 * time.Second
+	writeTimeout = 2 * time.Second
+	dialTimeout  = 3 * time.Second
+)
+
 func NewClient(ctx context.Context, cfg config.RedisConfig) (*redis.Client, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:         cfg.Address,
 		Password:     cfg.Password,
 		DB:           cfg.DB,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 5 * time.Second,
+		ReadTimeout:  readTimeout,
+		WriteTimeout: writeTimeout,
+		DialTimeout:  dialTimeout,
 	})
 
 	err := client.Ping(ctx).Err()
