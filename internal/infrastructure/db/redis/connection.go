@@ -9,11 +9,11 @@ import (
 	"weather-api/internal/config"
 )
 
-func NewClient(ctx context.Context, cfg config.Config) (*redis.Client, error) {
+func NewClient(ctx context.Context, cfg config.RedisConfig) (*redis.Client, error) {
 	client := redis.NewClient(&redis.Options{
-		Addr:         cfg.RedisAdress,
-		Password:     cfg.DBPassword,
-		DB:           cfg.RedisDB,
+		Addr:         cfg.Address,
+		Password:     cfg.Password,
+		DB:           cfg.DB,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
 	})

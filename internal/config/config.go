@@ -3,30 +3,51 @@ package config
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	DBHost        string `mapstructure:"DB_HOST"`
-	DBPort        string `mapstructure:"DB_PORT"`
-	DBUser        string `mapstructure:"DB_USER"`
-	DBPassword    string `mapstructure:"DB_PASSWORD"`
-	DBName        string `mapstructure:"DB_NAME"`
-	ServerHost    string `mapstructure:"SERVER_HOST"`
-	ServerPort    string `mapstructure:"SERVER_PORT"`
-	WeatherApiUrl string `mapstructure:"WEATHER_API_URL"`
-	WeatherApiKey string `mapstructure:"WEATHER_API_KEY"`
-	EmailHost     string `mapstructure:"EMAIL_HOST"`
-	EmailPort     int    `mapstructure:"EMAIL_PORT"`
-	EmailUser     string `mapstructure:"EMAIL_USERNAME"`
-	EmailPassword string `mapstructure:"EMAIL_PASSWORD"`
-	EmailFrom     string `mapstructure:"EMAIL_FROM"`
-	OpenMeteoUrl  string `mapstructure:"OPEN_METEO_URL"`
-	GeoCodingUrl  string `mapstructure:"GEO_CODING_URL"`
-	RedisAdress   string `mapstructure:"REDIS_ADDRESS"`
-	RedisPassword string `mapstructure:"REDIS_PASSWORD"`
-	RedisDB       int    `mapstructure:"REDIS_DB"`
+	DB           DBConfig      `mapstructure:"DB"`
+	Server       ServerConfig  `mapstructure:"SERVER"`
+	Weather      WeatherConfig `mapstructure:"WEATHER"`
+	Email        EmailConfig   `mapstructure:"EMAIL"`
+	OpenMeteoUrl string        `mapstructure:"OPEN_METEO_URL"`
+	GeoCodingUrl string        `mapstructure:"GEO_CODING_URL"`
+	Redis        RedisConfig   `mapstructure:"REDIS"`
+}
+
+type DBConfig struct {
+	Host     string `mapstructure:"HOST"`
+	Port     string `mapstructure:"PORT"`
+	User     string `mapstructure:"USER"`
+	Password string `mapstructure:"PASSWORD"`
+	Name     string `mapstructure:"NAME"`
+}
+
+type ServerConfig struct {
+	Host string `mapstructure:"HOST"`
+	Port string `mapstructure:"PORT"`
+}
+
+type WeatherConfig struct {
+	ApiUrl string `mapstructure:"API_URL"`
+	ApiKey string `mapstructure:"API_KEY"`
+}
+
+type EmailConfig struct {
+	Host     string `mapstructure:"HOST"`
+	Port     int    `mapstructure:"PORT"`
+	Username string `mapstructure:"USERNAME"`
+	Password string `mapstructure:"PASSWORD"`
+	From     string `mapstructure:"FROM"`
+}
+
+type RedisConfig struct {
+	Address  string `mapstructure:"ADDRESS"`
+	Password string `mapstructure:"PASSWORD"`
+	DB       int    `mapstructure:"DB"`
 }
 
 func LoadConfig() (Config, error) {
@@ -37,6 +58,8 @@ func LoadConfig() (Config, error) {
 		log.Print("No .env file found, binding individual environment variables.")
 		bindAllEnvVars()
 	}
+
+	bindEnvKeysWithDots()
 
 	var config Config
 	err = viper.Unmarshal(&config)
@@ -67,4 +90,11 @@ func bindAllEnvVars() {
 	_ = viper.BindEnv("REDIS_ADDRESS")
 	_ = viper.BindEnv("REDIS_PASSWORD")
 	_ = viper.BindEnv("REDIS_DB")
+}
+
+func bindEnvKeysWithDots() {
+	for _, key := range viper.AllKeys() {
+		dottedKey := strings.ToLower(strings.ReplaceAll(key, "_", "."))
+		viper.Set(dottedKey, viper.Get(key))
+	}
 }

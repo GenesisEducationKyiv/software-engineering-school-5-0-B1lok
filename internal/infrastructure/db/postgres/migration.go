@@ -10,10 +10,10 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 )
 
-func RunMigrations(cfg config.Config) {
-	escapedPassword := url.QueryEscape(cfg.DBPassword)
+func RunMigrations(cfg config.DBConfig) {
+	escapedPassword := url.QueryEscape(cfg.Password)
 	connectionString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		cfg.DBUser, escapedPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
+		cfg.User, escapedPassword, cfg.Host, cfg.Port, cfg.Name)
 
 	m, err := migrate.New("file://migrations", connectionString)
 	if err != nil {
@@ -26,9 +26,9 @@ func RunMigrations(cfg config.Config) {
 	}
 }
 
-func RunMigrationsWithPath(cfg config.Config, migrationPath string) {
+func RunMigrationsWithPath(cfg config.DBConfig, migrationPath string) {
 	connectionString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
+		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name)
 
 	m, err := migrate.New(migrationPath, connectionString)
 	if err != nil {
