@@ -4,6 +4,7 @@
 package open_meteo
 
 import (
+	"context"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"
@@ -50,8 +51,9 @@ func TestGetWeather(t *testing.T) {
 
 	repo := NewClient(openMeteoURL, geoCodingURL, appHttp.NoOpLogger{})
 	repo.client = appHttp.MockHTTPClientWithResponses(mockResponses)
+	ctx := context.Background()
 
-	weather, err := repo.GetWeather("Kyiv")
+	weather, err := repo.GetWeather(ctx, "Kyiv")
 
 	require.NoError(t, err)
 	require.NotNil(t, weather)
@@ -77,8 +79,9 @@ func TestGetDailyForecast(t *testing.T) {
 
 	repo := NewClient(openMeteoURL, geoCodingURL, appHttp.NoOpLogger{})
 	repo.client = appHttp.MockHTTPClientWithResponses(mockResponses)
+	ctx := context.Background()
 
-	forecast, err := repo.GetDailyForecast(location)
+	forecast, err := repo.GetDailyForecast(ctx, location)
 
 	require.NoError(t, err)
 	require.NotNil(t, forecast)
@@ -90,7 +93,7 @@ func TestGetDailyForecast(t *testing.T) {
 
 func TestGetHourlyForecast(t *testing.T) {
 	coordinatesResponse := loadJSONFile(t, "coordinates_response.json")
-	dailyResponse := loadJSONFile(t, "hourly_weather_response.json")
+	hourlyResponse := loadJSONFile(t, "hourly_weather_response.json")
 	location := "Kyiv"
 
 	mockResponses := map[string]appHttp.MockResponse{
@@ -99,7 +102,7 @@ func TestGetHourlyForecast(t *testing.T) {
 			StatusCode: http.StatusOK,
 		},
 		openMeteoURL: {
-			Body:       dailyResponse,
+			Body:       hourlyResponse,
 			StatusCode: http.StatusOK,
 		},
 	}
@@ -107,8 +110,9 @@ func TestGetHourlyForecast(t *testing.T) {
 	repo := NewClient(openMeteoURL, geoCodingURL, appHttp.NoOpLogger{})
 	repo.client = appHttp.MockHTTPClientWithResponses(mockResponses)
 	repo.SetClock(MockClock{})
+	ctx := context.Background()
 
-	forecast, err := repo.GetHourlyForecast(location)
+	forecast, err := repo.GetHourlyForecast(ctx, location)
 
 	require.NoError(t, err)
 	require.NotNil(t, forecast)

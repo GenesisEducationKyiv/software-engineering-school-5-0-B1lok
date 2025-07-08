@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -11,8 +12,13 @@ import (
 	pkgErrors "weather-api/pkg/errors"
 )
 
-func Get(client *http.Client, endpoint string) (*http.Response, error) {
-	resp, err := client.Get(endpoint)
+func Get(ctx context.Context, client *http.Client, endpoint string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, pkgErrors.New(internalErrors.ErrInternal, "failed to create request to API")
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, pkgErrors.New(internalErrors.ErrInternal, "failed to connect to API")
 	}

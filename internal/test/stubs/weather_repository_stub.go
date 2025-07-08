@@ -1,6 +1,7 @@
 package stubs
 
 import (
+	"context"
 	"sync"
 
 	"weather-api/internal/domain"
@@ -25,7 +26,10 @@ func NewWeatherRepositoryStub() *WeatherRepositoryStub {
 	}
 }
 
-func (s *WeatherRepositoryStub) GetWeather(city string) (*domain.Weather, error) {
+func (s *WeatherRepositoryStub) GetWeather(
+	ctx context.Context,
+	city string,
+) (*domain.Weather, error) {
 	s.mu.Lock()
 	s.callCount[city]++
 	s.mu.Unlock()
@@ -42,7 +46,10 @@ func (s *WeatherRepositoryStub) GetWeather(city string) (*domain.Weather, error)
 	}, nil
 }
 
-func (s *WeatherRepositoryStub) GetDailyForecast(city string) (*domain.WeatherDaily, error) {
+func (s *WeatherRepositoryStub) GetDailyForecast(
+	ctx context.Context,
+	city string,
+) (*domain.WeatherDaily, error) {
 	if s.GetDailyForecastFn != nil {
 		return s.GetDailyForecastFn(city)
 	}
@@ -61,7 +68,10 @@ func (s *WeatherRepositoryStub) GetDailyForecast(city string) (*domain.WeatherDa
 	}, nil
 }
 
-func (s *WeatherRepositoryStub) GetHourlyForecast(city string) (*domain.WeatherHourly, error) {
+func (s *WeatherRepositoryStub) GetHourlyForecast(
+	ctx context.Context,
+	city string,
+) (*domain.WeatherHourly, error) {
 	if s.GetHourlyForecastFn != nil {
 		return s.GetHourlyForecastFn(city)
 	}

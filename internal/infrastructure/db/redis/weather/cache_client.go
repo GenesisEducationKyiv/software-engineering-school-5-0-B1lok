@@ -14,9 +14,9 @@ import (
 )
 
 type Client interface {
-	GetDailyForecast(city string) (*domain.WeatherDaily, error)
-	GetHourlyForecast(city string) (*domain.WeatherHourly, error)
-	GetWeather(city string) (*domain.Weather, error)
+	GetDailyForecast(ctx context.Context, city string) (*domain.WeatherDaily, error)
+	GetHourlyForecast(ctx context.Context, city string) (*domain.WeatherHourly, error)
+	GetWeather(ctx context.Context, city string) (*domain.Weather, error)
 }
 
 type MetricsRecorder interface {
@@ -60,8 +60,9 @@ func NewProxyClient(
 	}
 }
 
-func (c *ProxyClient) GetDailyForecast(city string) (*domain.WeatherDaily, error) {
-	ctx := context.Background()
+func (c *ProxyClient) GetDailyForecast(
+	ctx context.Context, city string,
+) (*domain.WeatherDaily, error) {
 	key := fmt.Sprintf("%s:%s:%s", c.prefix, ForecastDaily, strings.ToLower(city))
 
 	cached, err := c.redis.Get(ctx, key).Result()
@@ -76,7 +77,7 @@ func (c *ProxyClient) GetDailyForecast(city string) (*domain.WeatherDaily, error
 		c.recorder.CacheMiss()
 	}
 
-	weather, err := c.delegate.GetDailyForecast(city)
+	weather, err := c.delegate.GetDailyForecast(ctx, city)
 	if err != nil {
 		return nil, err
 	}
@@ -91,8 +92,9 @@ func (c *ProxyClient) GetDailyForecast(city string) (*domain.WeatherDaily, error
 	return weather, nil
 }
 
-func (c *ProxyClient) GetHourlyForecast(city string) (*domain.WeatherHourly, error) {
-	ctx := context.Background()
+func (c *ProxyClient) GetHourlyForecast(
+	ctx context.Context, city string,
+) (*domain.WeatherHourly, error) {
 	key := fmt.Sprintf("%s:%s:%s", c.prefix, ForecastHourly, strings.ToLower(city))
 
 	cached, err := c.redis.Get(ctx, key).Result()
@@ -107,7 +109,7 @@ func (c *ProxyClient) GetHourlyForecast(city string) (*domain.WeatherHourly, err
 		c.recorder.CacheMiss()
 	}
 
-	weather, err := c.delegate.GetHourlyForecast(city)
+	weather, err := c.delegate.GetHourlyForecast(ctx, city)
 	if err != nil {
 		return nil, err
 	}
@@ -122,8 +124,7 @@ func (c *ProxyClient) GetHourlyForecast(city string) (*domain.WeatherHourly, err
 	return weather, nil
 }
 
-func (c *ProxyClient) GetWeather(city string) (*domain.Weather, error) {
-	ctx := context.Background()
+func (c *ProxyClient) GetWeather(ctx context.Context, city string) (*domain.Weather, error) {
 	key := fmt.Sprintf("%s:%s:%s", c.prefix, ForecastCurrent, strings.ToLower(city))
 
 	cached, err := c.redis.Get(ctx, key).Result()
@@ -138,7 +139,7 @@ func (c *ProxyClient) GetWeather(city string) (*domain.Weather, error) {
 		c.recorder.CacheMiss()
 	}
 
-	weather, err := c.delegate.GetWeather(city)
+	weather, err := c.delegate.GetWeather(ctx, city)
 	if err != nil {
 		return nil, err
 	}

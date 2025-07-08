@@ -1,6 +1,7 @@
 package open_meteo
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -54,13 +55,13 @@ func (h *Client) SetClock(clock appHttp.Clock) {
 	h.clock = clock
 }
 
-func (h *Client) GetWeather(city string) (*domain.Weather, error) {
-	coords, err := h.fetchCoordinates(city)
+func (h *Client) GetWeather(ctx context.Context, city string) (*domain.Weather, error) {
+	coords, err := h.fetchCoordinates(ctx, city)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := appHttp.Get(h.client, h.buildRequestURL(coords, currentWeatherParams, current))
+	resp, err := appHttp.Get(ctx, h.client, h.buildRequestURL(coords, currentWeatherParams, current))
 	h.logger.LogResponse(providerName, resp)
 	if err != nil {
 		return nil, pkgErrors.New(
@@ -86,13 +87,13 @@ func (h *Client) GetWeather(city string) (*domain.Weather, error) {
 	return toWeather(&apiResponse), nil
 }
 
-func (h *Client) GetDailyForecast(city string) (*domain.WeatherDaily, error) {
-	coords, err := h.fetchCoordinates(city)
+func (h *Client) GetDailyForecast(ctx context.Context, city string) (*domain.WeatherDaily, error) {
+	coords, err := h.fetchCoordinates(ctx, city)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := appHttp.Get(h.client, h.buildRequestURL(coords, dailyForecastParams, daily))
+	resp, err := appHttp.Get(ctx, h.client, h.buildRequestURL(coords, dailyForecastParams, daily))
 	h.logger.LogResponse(providerName, resp)
 	if err != nil {
 		return nil, pkgErrors.New(
@@ -118,13 +119,16 @@ func (h *Client) GetDailyForecast(city string) (*domain.WeatherDaily, error) {
 	return toWeatherDaily(&apiResponse, city), nil
 }
 
-func (h *Client) GetHourlyForecast(city string) (*domain.WeatherHourly, error) {
-	coords, err := h.fetchCoordinates(city)
+func (h *Client) GetHourlyForecast(
+	ctx context.Context,
+	city string,
+) (*domain.WeatherHourly, error) {
+	coords, err := h.fetchCoordinates(ctx, city)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := appHttp.Get(h.client, h.buildRequestURL(coords, hourlyForecastParams, hourly))
+	resp, err := appHttp.Get(ctx, h.client, h.buildRequestURL(coords, hourlyForecastParams, hourly))
 	h.logger.LogResponse(providerName, resp)
 	if err != nil {
 		return nil, pkgErrors.New(
@@ -155,10 +159,10 @@ type coordinates struct {
 	longitude float64
 }
 
-func (h *Client) fetchCoordinates(city string) (*coordinates, error) {
+func (h *Client) fetchCoordinates(ctx context.Context, city string) (*coordinates, error) {
 	endpoint := fmt.Sprintf("%s/search?name=%s&count=1", h.geoCodingURL, city)
 
-	resp, err := appHttp.Get(h.client, endpoint)
+	resp, err := appHttp.Get(ctx, h.client, endpoint)
 	if err != nil {
 		return nil, err
 	}

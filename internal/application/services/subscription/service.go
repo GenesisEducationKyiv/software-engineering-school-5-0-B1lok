@@ -22,7 +22,7 @@ type Repository interface {
 }
 
 type CityValidator interface {
-	Validate(city string) (*string, error)
+	Validate(ctx context.Context, city string) (*string, error)
 }
 
 type Service struct {
@@ -45,7 +45,7 @@ func NewService(
 func (s *Service) Subscribe(
 	ctx context.Context, subscribeCommand *command.SubscribeCommand,
 ) error {
-	if err := s.setValidatedCity(subscribeCommand); err != nil {
+	if err := s.setValidatedCity(ctx, subscribeCommand); err != nil {
 		return err
 	}
 	exists, err := s.repository.ExistByLookup(ctx, subscribeCommand.ToSubscriptionLookup())
@@ -99,8 +99,11 @@ func (s *Service) Unsubscribe(ctx context.Context, token string) error {
 	return s.repository.Delete(ctx, subscription.ID)
 }
 
-func (s *Service) setValidatedCity(subscribeCommand *command.SubscribeCommand) error {
-	validatedCity, err := s.validator.Validate(subscribeCommand.City)
+func (s *Service) setValidatedCity(
+	ctx context.Context,
+	subscribeCommand *command.SubscribeCommand,
+) error {
+	validatedCity, err := s.validator.Validate(ctx, subscribeCommand.City)
 	if err != nil {
 		return err
 	}

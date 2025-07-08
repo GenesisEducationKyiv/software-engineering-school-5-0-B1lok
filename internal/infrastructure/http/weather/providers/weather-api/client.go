@@ -1,6 +1,7 @@
 package weather_api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -49,14 +50,14 @@ func (c *Client) SetClock(clock appHttp.Clock) {
 	c.clock = clock
 }
 
-func (c *Client) GetWeather(city string) (*domain.Weather, error) {
+func (c *Client) GetWeather(ctx context.Context, city string) (*domain.Weather, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s",
 		c.baseURL,
 		currentEndpoint,
 		c.apiKey,
 		url.QueryEscape(city),
 	)
-	resp, err := appHttp.Get(c.client, endpoint)
+	resp, err := appHttp.Get(ctx, c.client, endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -79,14 +80,14 @@ func (c *Client) GetWeather(city string) (*domain.Weather, error) {
 	return toWeather(&apiResponse), nil
 }
 
-func (c *Client) GetDailyForecast(city string) (*domain.WeatherDaily, error) {
+func (c *Client) GetDailyForecast(ctx context.Context, city string) (*domain.WeatherDaily, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s&days=1",
 		c.baseURL,
 		forecastEndpoint,
 		c.apiKey,
 		url.QueryEscape(city),
 	)
-	resp, err := appHttp.Get(c.client, endpoint)
+	resp, err := appHttp.Get(ctx, c.client, endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -110,14 +111,17 @@ func (c *Client) GetDailyForecast(city string) (*domain.WeatherDaily, error) {
 	return toWeatherDaily(&apiResponse), nil
 }
 
-func (c *Client) GetHourlyForecast(city string) (*domain.WeatherHourly, error) {
+func (c *Client) GetHourlyForecast(
+	ctx context.Context,
+	city string,
+) (*domain.WeatherHourly, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s&days=1",
 		c.baseURL,
 		forecastEndpoint,
 		c.apiKey,
 		url.QueryEscape(city),
 	)
-	resp, err := appHttp.Get(c.client, endpoint)
+	resp, err := appHttp.Get(ctx, c.client, endpoint)
 	if err != nil {
 		return nil, err
 	}

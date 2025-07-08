@@ -4,6 +4,7 @@
 package weather_api
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,8 +35,9 @@ func TestGetWeather(t *testing.T) {
 
 	repo := NewClient("http://mocked-weather-api.com", "dummy-api-key", appHttp.NoOpLogger{})
 	repo.client = appHttp.MockHTTPClient(appHttp.MockResponse{Body: mockResponse, StatusCode: http.StatusOK})
+	ctx := context.Background()
 
-	weather, err := repo.GetWeather("London")
+	weather, err := repo.GetWeather(ctx, "London")
 
 	require.NoError(t, err)
 	require.NotNil(t, weather)
@@ -48,8 +50,9 @@ func TestGetDailyForecast(t *testing.T) {
 
 	repo := NewClient("http://mocked-weather-api.com", "dummy-api-key", appHttp.NoOpLogger{})
 	repo.client = appHttp.MockHTTPClient(appHttp.MockResponse{Body: mockResponse, StatusCode: http.StatusOK})
+	ctx := context.Background()
 
-	forecast, err := repo.GetDailyForecast("London")
+	forecast, err := repo.GetDailyForecast(ctx, "London")
 
 	require.NoError(t, err)
 	require.NotNil(t, forecast)
@@ -65,8 +68,9 @@ func TestGetHourlyForecast(t *testing.T) {
 	repo := NewClient("http://mocked-weather-api.com", "dummy-api-key", appHttp.NoOpLogger{})
 	repo.client = appHttp.MockHTTPClient(appHttp.MockResponse{Body: mockResponse, StatusCode: http.StatusOK})
 	repo.SetClock(MockClock{})
+	ctx := context.Background()
 
-	forecast, err := repo.GetHourlyForecast("London")
+	forecast, err := repo.GetHourlyForecast(ctx, "London")
 
 	require.NoError(t, err)
 	require.NotNil(t, forecast)
@@ -81,8 +85,9 @@ func TestHandleAPIErrorResponse(t *testing.T) {
 
 	repo := NewClient("http://mocked-weather-api.com", "dummy-api-key", appHttp.NoOpLogger{})
 	repo.client = appHttp.MockHTTPClient(appHttp.MockResponse{Body: mockErrorResponse, StatusCode: http.StatusBadRequest})
+	ctx := context.Background()
 
-	_, err := repo.GetWeather("NonExistentCity")
+	_, err := repo.GetWeather(ctx, "NonExistentCity")
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "City not found")

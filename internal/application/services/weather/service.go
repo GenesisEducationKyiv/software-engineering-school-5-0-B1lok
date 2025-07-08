@@ -1,13 +1,15 @@
 package weather
 
 import (
+	"context"
+
 	"weather-api/internal/application/common"
 	"weather-api/internal/application/query"
 	"weather-api/internal/domain"
 )
 
 type Reader interface {
-	GetWeather(city string) (*domain.Weather, error)
+	GetWeather(ctx context.Context, city string) (*domain.Weather, error)
 }
 
 type Service struct {
@@ -18,8 +20,8 @@ func NewService(weatherRepository Reader) *Service {
 	return &Service{weatherRepository: weatherRepository}
 }
 
-func (s *Service) GetWeather(city string) (*query.WeatherQueryResult, error) {
-	weather, err := s.weatherRepository.GetWeather(city)
+func (s *Service) GetWeather(ctx context.Context, city string) (*query.WeatherQueryResult, error) {
+	weather, err := s.weatherRepository.GetWeather(ctx, city)
 	if err != nil {
 		return nil, err
 	}

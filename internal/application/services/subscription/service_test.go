@@ -38,7 +38,7 @@ func TestSubscriptionService_Subscribe_Success(t *testing.T) {
 		Frequency: "daily",
 	}
 
-	mockValidator.On("Validate", "berlin").Return(ValidatedCity, nil)
+	mockValidator.On("Validate", ctx, "berlin").Return(ValidatedCity, nil)
 
 	lookup := &domain.SubscriptionLookup{
 		Email:     "test@example.com",
@@ -81,7 +81,7 @@ func TestSubscriptionService_Subscribe_InvalidCity(t *testing.T) {
 	}
 
 	validationErr := pkgErrors.New(internalErrors.ErrNotFound, "City not found")
-	mockValidator.On("Validate", "invalidcity").Return(nil, validationErr)
+	mockValidator.On("Validate", ctx, "invalidcity").Return(nil, validationErr)
 
 	err := service.Subscribe(ctx, cmd)
 
@@ -109,7 +109,7 @@ func TestSubscriptionService_Subscribe_AlreadyExists(t *testing.T) {
 		Frequency: "daily",
 	}
 
-	mockValidator.On("Validate", "berlin").Return(ValidatedCity, nil)
+	mockValidator.On("Validate", ctx, "berlin").Return(ValidatedCity, nil)
 
 	lookup := &domain.SubscriptionLookup{
 		Email:     "test@example.com",
@@ -147,7 +147,7 @@ func TestSubscriptionService_Subscribe_RepositoryError(t *testing.T) {
 		Frequency: "daily",
 	}
 
-	mockValidator.On("Validate", "berlin").Return(ValidatedCity, nil)
+	mockValidator.On("Validate", ctx, "berlin").Return(ValidatedCity, nil)
 
 	lookup := &domain.SubscriptionLookup{
 		Email:     "test@example.com",
@@ -186,7 +186,7 @@ func TestSubscriptionService_Subscribe_InvalidFrequency(t *testing.T) {
 		Frequency: "invalid",
 	}
 
-	mockValidator.On("Validate", "berlin").Return(ValidatedCity, nil)
+	mockValidator.On("Validate", ctx, "berlin").Return(ValidatedCity, nil)
 
 	validatedCmd := &command.SubscribeCommand{
 		Email:     "test@example.com",
@@ -225,7 +225,7 @@ func TestSubscriptionService_Subscribe_CreateError(t *testing.T) {
 		Frequency: "daily",
 	}
 
-	mockValidator.On("Validate", "berlin").Return(ValidatedCity, nil)
+	mockValidator.On("Validate", ctx, "berlin").Return(ValidatedCity, nil)
 
 	lookup := &domain.SubscriptionLookup{
 		Email:     "test@example.com",
@@ -265,7 +265,7 @@ func TestSubscriptionService_Subscribe_EmailError(t *testing.T) {
 		Frequency: "daily",
 	}
 
-	mockValidator.On("Validate", "berlin").Return(ValidatedCity, nil)
+	mockValidator.On("Validate", ctx, "berlin").Return(ValidatedCity, nil)
 
 	lookup := &domain.SubscriptionLookup{
 		Email:     "test@example.com",

@@ -12,7 +12,7 @@ import (
 )
 
 type Client interface {
-	Validate(city string) (*string, error)
+	Validate(ctx context.Context, city string) (*string, error)
 }
 
 type MetricsRecorder interface {
@@ -44,8 +44,7 @@ func NewProxyClient(
 	}
 }
 
-func (c *ProxyClient) Validate(city string) (*string, error) {
-	ctx := context.Background()
+func (c *ProxyClient) Validate(ctx context.Context, city string) (*string, error) {
 	key := fmt.Sprintf("%s:%s", c.prefix, strings.ToLower(city))
 
 	cached, err := c.redis.Get(ctx, key).Result()
@@ -59,7 +58,7 @@ func (c *ProxyClient) Validate(city string) (*string, error) {
 	if errors.Is(err, redis.Nil) {
 		c.recorder.CacheMiss()
 	}
-	cityValidated, err := c.delegate.Validate(city)
+	cityValidated, err := c.delegate.Validate(ctx, city)
 	if err != nil {
 		return nil, err
 	}
