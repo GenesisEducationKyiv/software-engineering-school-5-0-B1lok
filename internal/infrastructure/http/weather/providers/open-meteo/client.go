@@ -37,7 +37,7 @@ const (
 	hourly         = "hourly"
 )
 
-func NewClient(openMeteoURL string, geoCodingURL string, logger Logger) *Client {
+func NewClient(openMeteoURL, geoCodingURL string, logger Logger) *Client {
 	client := &http.Client{
 		Timeout: defaultTimeout,
 	}

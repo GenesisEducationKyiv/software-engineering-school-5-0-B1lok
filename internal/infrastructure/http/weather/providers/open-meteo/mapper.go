@@ -6,6 +6,10 @@ import (
 	"weather-api/internal/domain"
 )
 
+const (
+	timeLayout = "2006-01-02 15:04"
+)
+
 func toWeather(weatherResponse *WeatherResponse) *domain.Weather {
 	return &domain.Weather{
 		Temperature: weatherResponse.Current.Temperature,
@@ -43,7 +47,7 @@ func toWeatherHourly(
 	response *WeatherHourlyResponse,
 	city string, targetTime time.Time,
 ) *domain.WeatherHourly {
-	currentTime := targetTime.Truncate(time.Hour).Format("2006-01-02T15:04")
+	currentTime := targetTime.Truncate(time.Hour).Format(timeLayout)
 	for index, hour := range response.Hourly.Time {
 		if hour == currentTime {
 			chanceRain := 0

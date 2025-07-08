@@ -1,4 +1,4 @@
-package weather_api_search
+package client
 
 import (
 	"encoding/json"
