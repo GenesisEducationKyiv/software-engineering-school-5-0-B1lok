@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 
 	"weather-api/internal/domain"
+	appRedis "weather-api/internal/infrastructure/db/redis"
 )
 
 type Client interface {
@@ -63,15 +65,12 @@ func NewProxyClient(
 func (c *ProxyClient) GetDailyForecast(
 	ctx context.Context, city string,
 ) (*domain.WeatherDaily, error) {
-	key := fmt.Sprintf("%s:%s:%s", c.prefix, ForecastDaily, strings.ToLower(city))
+	key := c.getForecastKey(ForecastDaily, city)
 
-	cached, err := c.redis.Get(ctx, key).Result()
+	cached, err := appRedis.Get[WeatherDaily](ctx, c.redis, key)
 	if err == nil {
-		var cachedWeather WeatherDaily
-		if err := json.Unmarshal([]byte(cached), &cachedWeather); err == nil {
-			c.recorder.CacheHit()
-			return ToDomainWeatherDaily(&cachedWeather), nil
-		}
+		c.recorder.CacheHit()
+		return ToDomainWeatherDaily(cached), nil
 	}
 	if errors.Is(err, redis.Nil) {
 		c.recorder.CacheMiss()
@@ -85,7 +84,11 @@ func (c *ProxyClient) GetDailyForecast(
 	if weather != nil {
 		data, err := json.Marshal(ToDTOWeatherDaily(weather))
 		if err == nil {
-			_ = c.redis.Set(ctx, key, data, c.provider.TTL(ForecastDaily)).Err()
+			if err := appRedis.Set(
+				ctx, c.redis, key, data, c.provider.TTL(ForecastDaily),
+			); err != nil {
+				log.Printf("proxy: failed to set cache for key %s: %v\n", key, err)
+			}
 		}
 	}
 
@@ -95,15 +98,12 @@ func (c *ProxyClient) GetDailyForecast(
 func (c *ProxyClient) GetHourlyForecast(
 	ctx context.Context, city string,
 ) (*domain.WeatherHourly, error) {
-	key := fmt.Sprintf("%s:%s:%s", c.prefix, ForecastHourly, strings.ToLower(city))
+	key := c.getForecastKey(ForecastHourly, city)
 
-	cached, err := c.redis.Get(ctx, key).Result()
+	cached, err := appRedis.Get[WeatherHourly](ctx, c.redis, key)
 	if err == nil {
-		var cachedWeather WeatherHourly
-		if err := json.Unmarshal([]byte(cached), &cachedWeather); err == nil {
-			c.recorder.CacheHit()
-			return ToDomainWeatherHourly(&cachedWeather), nil
-		}
+		c.recorder.CacheHit()
+		return ToDomainWeatherHourly(cached), nil
 	}
 	if errors.Is(err, redis.Nil) {
 		c.recorder.CacheMiss()
@@ -117,7 +117,11 @@ func (c *ProxyClient) GetHourlyForecast(
 	if weather != nil {
 		data, err := json.Marshal(ToDTOWeatherHourly(weather))
 		if err == nil {
-			_ = c.redis.Set(ctx, key, data, c.provider.TTL(ForecastHourly)).Err()
+			if err := appRedis.Set(
+				ctx, c.redis, key, data, c.provider.TTL(ForecastHourly),
+			); err != nil {
+				log.Printf("proxy: failed to set cache for key %s: %v\n", key, err)
+			}
 		}
 	}
 
@@ -125,15 +129,12 @@ func (c *ProxyClient) GetHourlyForecast(
 }
 
 func (c *ProxyClient) GetWeather(ctx context.Context, city string) (*domain.Weather, error) {
-	key := fmt.Sprintf("%s:%s:%s", c.prefix, ForecastCurrent, strings.ToLower(city))
+	key := c.getForecastKey(ForecastCurrent, city)
 
-	cached, err := c.redis.Get(ctx, key).Result()
+	cached, err := appRedis.Get[Weather](ctx, c.redis, key)
 	if err == nil {
-		var cachedWeather Weather
-		if err := json.Unmarshal([]byte(cached), &cachedWeather); err == nil {
-			c.recorder.CacheHit()
-			return ToDomainWeather(&cachedWeather), nil
-		}
+		c.recorder.CacheHit()
+		return ToDomainWeather(cached), nil
 	}
 	if errors.Is(err, redis.Nil) {
 		c.recorder.CacheMiss()
@@ -147,9 +148,17 @@ func (c *ProxyClient) GetWeather(ctx context.Context, city string) (*domain.Weat
 	if weather != nil {
 		data, err := json.Marshal(ToDTOWeather(weather))
 		if err == nil {
-			_ = c.redis.Set(ctx, key, data, c.provider.TTL(ForecastCurrent)).Err()
+			if err := appRedis.Set(
+				ctx, c.redis, key, data, c.provider.TTL(ForecastCurrent),
+			); err != nil {
+				log.Printf("proxy: failed to set cache for key %s: %v\n", key, err)
+			}
 		}
 	}
 
 	return weather, nil
+}
+
+func (c *ProxyClient) getForecastKey(forecastType ForecastType, city string) string {
+	return fmt.Sprintf("%s:%s:%s", c.prefix, forecastType, strings.ToLower(city))
 }
