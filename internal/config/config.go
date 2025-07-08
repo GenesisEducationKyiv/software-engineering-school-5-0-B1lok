@@ -21,8 +21,8 @@ type Config struct {
 	Server       ServerConfig  `config:"server"`
 	Weather      WeatherConfig `config:"weather"`
 	Email        EmailConfig   `config:"email"`
-	OpenMeteoUrl string        `config:"open_meteo_url"`
-	GeoCodingUrl string        `config:"geo_coding_url"`
+	OpenMeteoURL string        `config:"open_meteo_url"`
+	GeoCodingURL string        `config:"geo_coding_url"`
 	Redis        RedisConfig   `config:"redis"`
 }
 
@@ -40,7 +40,7 @@ type ServerConfig struct {
 }
 
 type WeatherConfig struct {
-	ApiUrl string `config:"api_url"`
+	ApiURL string `config:"api_url"`
 	ApiKey string `config:"api_key"`
 }
 

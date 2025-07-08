@@ -22,18 +22,18 @@ type Client struct {
 	apiKey  string
 	client  *http.Client
 	clock   appHttp.Clock
-	baseUrl string
+	baseURL string
 	logger  Logger
 }
 
-func NewClient(apiUrl string, apiKey string, logger Logger) *Client {
+func NewClient(apiURL string, apiKey string, logger Logger) *Client {
 	client := &http.Client{
 		Timeout: defaultTimeout,
 	}
 	return &Client{apiKey: apiKey,
 		client:  client,
 		clock:   appHttp.SystemClock{},
-		baseUrl: apiUrl,
+		baseURL: apiURL,
 		logger:  logger,
 	}
 }
@@ -51,7 +51,7 @@ func (r *Client) SetClock(clock appHttp.Clock) {
 
 func (r *Client) GetWeather(city string) (*domain.Weather, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s",
-		r.baseUrl,
+		r.baseURL,
 		currentEndpoint,
 		r.apiKey,
 		url.QueryEscape(city),
@@ -81,7 +81,7 @@ func (r *Client) GetWeather(city string) (*domain.Weather, error) {
 
 func (r *Client) GetDailyForecast(city string) (*domain.WeatherDaily, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s&days=1",
-		r.baseUrl,
+		r.baseURL,
 		forecastEndpoint,
 		r.apiKey,
 		url.QueryEscape(city),
@@ -112,7 +112,7 @@ func (r *Client) GetDailyForecast(city string) (*domain.WeatherDaily, error) {
 
 func (r *Client) GetHourlyForecast(city string) (*domain.WeatherHourly, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s&days=1",
-		r.baseUrl,
+		r.baseURL,
 		forecastEndpoint,
 		r.apiKey,
 		url.QueryEscape(city),

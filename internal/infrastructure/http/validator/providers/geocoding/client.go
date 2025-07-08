@@ -1,4 +1,4 @@
-package geo_coding_api
+package geocoding
 
 import (
 	"encoding/json"
@@ -24,7 +24,7 @@ type Client struct {
 }
 
 const (
-	providerName   = "geo-coding-api"
+	providerName   = "geocoding"
 	defaultTimeout = 10 * time.Second
 )
 

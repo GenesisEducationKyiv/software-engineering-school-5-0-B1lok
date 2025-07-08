@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	openMeteoUrl = "http://open-meteo-mock/v1"
-	geoCodingUrl = "http://geocoding-mock/v1"
+	openMeteoURL = "http://open-meteo-mock/v1"
+	geoCodingURL = "http://geocoding-mock/v1"
 )
 
 type MockClock struct{}
@@ -38,17 +38,17 @@ func TestGetWeather(t *testing.T) {
 	currentResponse := loadJSONFile(t, "current_weather_response.json")
 
 	mockResponses := map[string]appHttp.MockResponse{
-		geoCodingUrl: {
+		geoCodingURL: {
 			Body:       coordinatesResponse,
 			StatusCode: http.StatusOK,
 		},
-		openMeteoUrl: {
+		openMeteoURL: {
 			Body:       currentResponse,
 			StatusCode: http.StatusOK,
 		},
 	}
 
-	repo := NewClient(openMeteoUrl, geoCodingUrl, appHttp.NoOpLogger{})
+	repo := NewClient(openMeteoURL, geoCodingURL, appHttp.NoOpLogger{})
 	repo.client = appHttp.MockHTTPClientWithResponses(mockResponses)
 
 	weather, err := repo.GetWeather("Kyiv")
@@ -65,17 +65,17 @@ func TestGetDailyForecast(t *testing.T) {
 	location := "Kyiv"
 
 	mockResponses := map[string]appHttp.MockResponse{
-		geoCodingUrl: {
+		geoCodingURL: {
 			Body:       coordinatesResponse,
 			StatusCode: http.StatusOK,
 		},
-		openMeteoUrl: {
+		openMeteoURL: {
 			Body:       dailyResponse,
 			StatusCode: http.StatusOK,
 		},
 	}
 
-	repo := NewClient(openMeteoUrl, geoCodingUrl, appHttp.NoOpLogger{})
+	repo := NewClient(openMeteoURL, geoCodingURL, appHttp.NoOpLogger{})
 	repo.client = appHttp.MockHTTPClientWithResponses(mockResponses)
 
 	forecast, err := repo.GetDailyForecast(location)
@@ -94,17 +94,17 @@ func TestGetHourlyForecast(t *testing.T) {
 	location := "Kyiv"
 
 	mockResponses := map[string]appHttp.MockResponse{
-		geoCodingUrl: {
+		geoCodingURL: {
 			Body:       coordinatesResponse,
 			StatusCode: http.StatusOK,
 		},
-		openMeteoUrl: {
+		openMeteoURL: {
 			Body:       dailyResponse,
 			StatusCode: http.StatusOK,
 		},
 	}
 
-	repo := NewClient(openMeteoUrl, geoCodingUrl, appHttp.NoOpLogger{})
+	repo := NewClient(openMeteoURL, geoCodingURL, appHttp.NoOpLogger{})
 	repo.client = appHttp.MockHTTPClientWithResponses(mockResponses)
 	repo.SetClock(MockClock{})
 

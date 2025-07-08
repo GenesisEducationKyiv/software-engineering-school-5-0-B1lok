@@ -14,7 +14,7 @@ import (
 
 	"weather-api/internal/infrastructure/prometheus"
 
-	geocodingapi "weather-api/internal/infrastructure/http/validator/providers/geo-coding-api"
+	geocodingapi "weather-api/internal/infrastructure/http/validator/providers/geocoding"
 	weatherapisearch "weather-api/internal/infrastructure/http/validator/providers/weather-api-search"
 	weatherapi "weather-api/internal/infrastructure/http/weather/providers/weather-api"
 	"weather-api/pkg/logger"
@@ -84,7 +84,7 @@ func run() error {
 	validatorMetrics := prometheus.NewCacheMetrics("weather-api", "validator")
 	weatherMetrics := prometheus.NewCacheMetrics("weather-api", "weather")
 
-	geoCodingApiClient := geocodingapi.NewClient(cfg.GeoCodingUrl, fileLogger)
+	geoCodingApiClient := geocodingapi.NewClient(cfg.GeoCodingURL, fileLogger)
 	cachedGeoCodingClient := cacheValidator.NewProxyClient(
 		geoCodingApiClient,
 		redisClient,
@@ -94,7 +94,7 @@ func run() error {
 	)
 
 	weatherApiSearchClient := weatherapisearch.NewClient(
-		cfg.Weather.ApiUrl, cfg.Weather.ApiKey, fileLogger)
+		cfg.Weather.ApiURL, cfg.Weather.ApiKey, fileLogger)
 	cachedWeatherApiSearchClient := cacheValidator.NewProxyClient(
 		weatherApiSearchClient,
 		redisClient,
@@ -108,7 +108,7 @@ func run() error {
 	cityValidator := validator.NewCityValidator(geoCodingApiHandler)
 
 	// Initialize repositories
-	weatherApiClient := weatherapi.NewClient(cfg.Weather.ApiUrl, cfg.Weather.ApiKey, fileLogger)
+	weatherApiClient := weatherapi.NewClient(cfg.Weather.ApiURL, cfg.Weather.ApiKey, fileLogger)
 	cachedWeatherApiClient := cacheClient.NewProxyClient(
 		weatherApiClient,
 		redisClient,
@@ -117,7 +117,7 @@ func run() error {
 		weatherMetrics,
 	)
 
-	openMeteoApiClient := openmeteo.NewClient(cfg.OpenMeteoUrl, cfg.GeoCodingUrl, fileLogger)
+	openMeteoApiClient := openmeteo.NewClient(cfg.OpenMeteoURL, cfg.GeoCodingURL, fileLogger)
 	cachedOpenMeteoApi := cacheClient.NewProxyClient(
 		openMeteoApiClient,
 		redisClient,
