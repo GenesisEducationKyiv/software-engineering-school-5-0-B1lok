@@ -64,7 +64,7 @@ func run() error {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	redisClient, err := redis.ConnectRedis(ctx, cfg)
+	redisClient, err := redis.NewClient(ctx, cfg)
 	if err != nil {
 		cancel()
 		return fmt.Errorf("failed to connect to redis: %w", err)
