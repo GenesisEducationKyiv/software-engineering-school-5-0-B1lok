@@ -19,21 +19,25 @@ type Logger interface {
 	LogResponse(provider string, resp *http.Response)
 }
 
+type Clock interface {
+	Now() time.Time
+}
+
 type Client struct {
 	apiKey  string
 	client  *http.Client
-	clock   appHttp.Clock
+	clock   Clock
 	baseURL string
 	logger  Logger
 }
 
-func NewClient(apiURL string, apiKey string, logger Logger) *Client {
+func NewClient(apiURL string, apiKey string, logger Logger, clock Clock) *Client {
 	client := &http.Client{
 		Timeout: defaultTimeout,
 	}
 	return &Client{apiKey: apiKey,
 		client:  client,
-		clock:   appHttp.SystemClock{},
+		clock:   clock,
 		baseURL: apiURL,
 		logger:  logger,
 	}
@@ -45,10 +49,6 @@ const (
 	forecastEndpoint = "/forecast.json"
 	defaultTimeout   = 10 * time.Second
 )
-
-func (c *Client) SetClock(clock appHttp.Clock) {
-	c.clock = clock
-}
 
 func (c *Client) GetWeather(ctx context.Context, city string) (*domain.Weather, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s",

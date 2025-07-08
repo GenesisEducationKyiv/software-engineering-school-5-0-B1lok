@@ -12,6 +12,9 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"weather-api/internal/infrastructure"
+	"weather-api/internal/infrastructure/db/redis/weather/ttl"
+
 	"weather-api/internal/infrastructure/prometheus"
 
 	geocodingapi "weather-api/internal/infrastructure/http/validator/providers/geocoding"
@@ -31,8 +34,6 @@ import (
 	"weather-api/internal/infrastructure/db/redis"
 	cacheValidator "weather-api/internal/infrastructure/db/redis/validator"
 	cacheClient "weather-api/internal/infrastructure/db/redis/weather"
-	cacheOpenmeteo "weather-api/internal/infrastructure/db/redis/weather/providers/open-meteo"
-	cacheWeather "weather-api/internal/infrastructure/db/redis/weather/providers/weather-api"
 	"weather-api/internal/infrastructure/email"
 	"weather-api/internal/infrastructure/http/validator"
 	"weather-api/internal/interface/rest"
@@ -108,20 +109,30 @@ func run() error {
 	cityValidator := validator.NewCityValidator(geoCodingApiHandler)
 
 	// Initialize repositories
-	weatherApiClient := weatherapi.NewClient(cfg.Weather.ApiURL, cfg.Weather.ApiKey, fileLogger)
+	weatherApiClient := weatherapi.NewClient(
+		cfg.Weather.ApiURL,
+		cfg.Weather.ApiKey,
+		fileLogger,
+		infrastructure.SystemClock{},
+	)
 	cachedWeatherApiClient := cacheClient.NewProxyClient(
 		weatherApiClient,
 		redisClient,
-		cacheWeather.NewTTLProvider(),
+		ttl.NewTTLProvider(15*time.Minute, infrastructure.SystemClock{}),
 		"weather-api",
 		weatherMetrics,
 	)
 
-	openMeteoApiClient := openmeteo.NewClient(cfg.OpenMeteoURL, cfg.GeoCodingURL, fileLogger)
+	openMeteoApiClient := openmeteo.NewClient(
+		cfg.OpenMeteoURL,
+		cfg.GeoCodingURL,
+		fileLogger,
+		infrastructure.SystemClock{},
+	)
 	cachedOpenMeteoApi := cacheClient.NewProxyClient(
 		openMeteoApiClient,
 		redisClient,
-		cacheOpenmeteo.NewTTLProvider(),
+		ttl.NewTTLProvider(1*time.Hour, infrastructure.SystemClock{}),
 		"open-meteo",
 		weatherMetrics,
 	)

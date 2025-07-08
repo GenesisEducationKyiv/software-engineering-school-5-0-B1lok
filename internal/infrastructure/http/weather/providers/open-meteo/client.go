@@ -22,9 +22,13 @@ type Logger interface {
 	LogResponse(provider string, resp *http.Response)
 }
 
+type Clock interface {
+	Now() time.Time
+}
+
 type Client struct {
 	client       *http.Client
-	clock        appHttp.Clock
+	clock        Clock
 	openMeteoURL string
 	geoCodingURL string
 	logger       Logger
@@ -38,21 +42,17 @@ const (
 	hourly         = "hourly"
 )
 
-func NewClient(openMeteoURL, geoCodingURL string, logger Logger) *Client {
+func NewClient(openMeteoURL, geoCodingURL string, logger Logger, clock Clock) *Client {
 	client := &http.Client{
 		Timeout: defaultTimeout,
 	}
 	return &Client{
 		client:       client,
 		openMeteoURL: openMeteoURL,
-		clock:        appHttp.SystemClock{},
+		clock:        clock,
 		geoCodingURL: geoCodingURL,
 		logger:       logger,
 	}
-}
-
-func (h *Client) SetClock(clock appHttp.Clock) {
-	h.clock = clock
 }
 
 func (h *Client) GetWeather(ctx context.Context, city string) (*domain.Weather, error) {

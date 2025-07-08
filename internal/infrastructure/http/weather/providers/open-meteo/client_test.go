@@ -49,7 +49,7 @@ func TestGetWeather(t *testing.T) {
 		},
 	}
 
-	repo := NewClient(openMeteoURL, geoCodingURL, appHttp.NoOpLogger{})
+	repo := NewClient(openMeteoURL, geoCodingURL, appHttp.NoOpLogger{}, MockClock{})
 	repo.client = appHttp.MockHTTPClientWithResponses(mockResponses)
 	ctx := context.Background()
 
@@ -77,7 +77,7 @@ func TestGetDailyForecast(t *testing.T) {
 		},
 	}
 
-	repo := NewClient(openMeteoURL, geoCodingURL, appHttp.NoOpLogger{})
+	repo := NewClient(openMeteoURL, geoCodingURL, appHttp.NoOpLogger{}, MockClock{})
 	repo.client = appHttp.MockHTTPClientWithResponses(mockResponses)
 	ctx := context.Background()
 
@@ -107,9 +107,8 @@ func TestGetHourlyForecast(t *testing.T) {
 		},
 	}
 
-	repo := NewClient(openMeteoURL, geoCodingURL, appHttp.NoOpLogger{})
+	repo := NewClient(openMeteoURL, geoCodingURL, appHttp.NoOpLogger{}, MockClock{})
 	repo.client = appHttp.MockHTTPClientWithResponses(mockResponses)
-	repo.SetClock(MockClock{})
 	ctx := context.Background()
 
 	forecast, err := repo.GetHourlyForecast(ctx, location)

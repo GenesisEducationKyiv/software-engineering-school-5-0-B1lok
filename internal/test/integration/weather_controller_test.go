@@ -11,10 +11,12 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
+	"weather-api/internal/infrastructure"
+	"weather-api/internal/infrastructure/db/redis/weather/ttl"
 
 	"weather-api/internal/application/services/weather"
 	cacheClient "weather-api/internal/infrastructure/db/redis/weather"
-	cacheWeather "weather-api/internal/infrastructure/db/redis/weather/providers/weather-api"
 	"weather-api/internal/infrastructure/prometheus"
 	"weather-api/internal/interface/rest"
 	"weather-api/internal/test/containers"
@@ -49,7 +51,7 @@ func (suite *WeatherControllerTestSuite) SetupSuite() {
 	cachedWeatherApiClient := cacheClient.NewProxyClient(
 		weatherRepo,
 		redisContainer.Client,
-		cacheWeather.NewTTLProvider(),
+		ttl.NewTTLProvider(15*time.Minute, infrastructure.SystemClock{}),
 		"weather-api",
 		weatherMetrics,
 	)

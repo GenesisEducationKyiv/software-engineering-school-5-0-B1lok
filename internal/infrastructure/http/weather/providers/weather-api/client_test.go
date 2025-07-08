@@ -33,7 +33,12 @@ func loadJSONFile(t *testing.T, filename string) string {
 func TestGetWeather(t *testing.T) {
 	mockResponse := loadJSONFile(t, "current_weather_response.json")
 
-	repo := NewClient("http://mocked-weather-api.com", "dummy-api-key", appHttp.NoOpLogger{})
+	repo := NewClient(
+		"http://mocked-weather-api.com",
+		"dummy-api-key",
+		appHttp.NoOpLogger{},
+		MockClock{},
+	)
 	repo.client = appHttp.MockHTTPClient(appHttp.MockResponse{Body: mockResponse, StatusCode: http.StatusOK})
 	ctx := context.Background()
 
@@ -48,7 +53,12 @@ func TestGetWeather(t *testing.T) {
 func TestGetDailyForecast(t *testing.T) {
 	mockResponse := loadJSONFile(t, "forecast_response.json")
 
-	repo := NewClient("http://mocked-weather-api.com", "dummy-api-key", appHttp.NoOpLogger{})
+	repo := NewClient(
+		"http://mocked-weather-api.com",
+		"dummy-api-key",
+		appHttp.NoOpLogger{},
+		MockClock{},
+	)
 	repo.client = appHttp.MockHTTPClient(appHttp.MockResponse{Body: mockResponse, StatusCode: http.StatusOK})
 	ctx := context.Background()
 
@@ -65,9 +75,12 @@ func TestGetDailyForecast(t *testing.T) {
 func TestGetHourlyForecast(t *testing.T) {
 	mockResponse := loadJSONFile(t, "forecast_response.json")
 
-	repo := NewClient("http://mocked-weather-api.com", "dummy-api-key", appHttp.NoOpLogger{})
+	repo := NewClient("http://mocked-weather-api.com",
+		"dummy-api-key",
+		appHttp.NoOpLogger{},
+		MockClock{},
+	)
 	repo.client = appHttp.MockHTTPClient(appHttp.MockResponse{Body: mockResponse, StatusCode: http.StatusOK})
-	repo.SetClock(MockClock{})
 	ctx := context.Background()
 
 	forecast, err := repo.GetHourlyForecast(ctx, "London")
@@ -83,7 +96,12 @@ func TestGetHourlyForecast(t *testing.T) {
 func TestHandleAPIErrorResponse(t *testing.T) {
 	mockErrorResponse := loadJSONFile(t, "not_found_response.json")
 
-	repo := NewClient("http://mocked-weather-api.com", "dummy-api-key", appHttp.NoOpLogger{})
+	repo := NewClient(
+		"http://mocked-weather-api.com",
+		"dummy-api-key",
+		appHttp.NoOpLogger{},
+		MockClock{},
+	)
 	repo.client = appHttp.MockHTTPClient(appHttp.MockResponse{Body: mockErrorResponse, StatusCode: http.StatusBadRequest})
 	ctx := context.Background()
 

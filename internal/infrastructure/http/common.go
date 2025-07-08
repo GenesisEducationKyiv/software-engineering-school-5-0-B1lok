@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
-	"time"
 
 	internalErrors "weather-api/internal/errors"
 	pkgErrors "weather-api/pkg/errors"
@@ -23,16 +22,6 @@ func Get(ctx context.Context, client *http.Client, endpoint string) (*http.Respo
 		return nil, pkgErrors.New(internalErrors.ErrInternal, "failed to connect to API")
 	}
 	return resp, nil
-}
-
-type Clock interface {
-	Now() time.Time
-}
-
-type SystemClock struct{}
-
-func (SystemClock) Now() time.Time {
-	return time.Now()
 }
 
 func MockHTTPClient(response MockResponse) *http.Client {

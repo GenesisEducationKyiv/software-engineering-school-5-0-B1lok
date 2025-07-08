@@ -2,7 +2,6 @@ package weather
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -82,13 +81,11 @@ func (c *ProxyClient) GetDailyForecast(
 	}
 
 	if weather != nil {
-		data, err := json.Marshal(ToDTOWeatherDaily(weather))
-		if err == nil {
-			if err := appRedis.Set(
-				ctx, c.redis, key, data, c.provider.TTL(ForecastDaily),
-			); err != nil {
-				log.Printf("proxy: failed to set cache for key %s: %v\n", key, err)
-			}
+		data := ToDTOWeatherDaily(weather)
+		if err := appRedis.Set(
+			ctx, c.redis, key, data, c.provider.TTL(ForecastDaily),
+		); err != nil {
+			log.Printf("proxy: failed to set cache for key %s: %v\n", key, err)
 		}
 	}
 
@@ -115,13 +112,11 @@ func (c *ProxyClient) GetHourlyForecast(
 	}
 
 	if weather != nil {
-		data, err := json.Marshal(ToDTOWeatherHourly(weather))
-		if err == nil {
-			if err := appRedis.Set(
-				ctx, c.redis, key, data, c.provider.TTL(ForecastHourly),
-			); err != nil {
-				log.Printf("proxy: failed to set cache for key %s: %v\n", key, err)
-			}
+		data := ToDTOWeatherHourly(weather)
+		if err := appRedis.Set(
+			ctx, c.redis, key, data, c.provider.TTL(ForecastHourly),
+		); err != nil {
+			log.Printf("proxy: failed to set cache for key %s: %v\n", key, err)
 		}
 	}
 
@@ -146,13 +141,11 @@ func (c *ProxyClient) GetWeather(ctx context.Context, city string) (*domain.Weat
 	}
 
 	if weather != nil {
-		data, err := json.Marshal(ToDTOWeather(weather))
-		if err == nil {
-			if err := appRedis.Set(
-				ctx, c.redis, key, data, c.provider.TTL(ForecastCurrent),
-			); err != nil {
-				log.Printf("proxy: failed to set cache for key %s: %v\n", key, err)
-			}
+		data := ToDTOWeather(weather)
+		if err := appRedis.Set(
+			ctx, c.redis, key, data, c.provider.TTL(ForecastCurrent),
+		); err != nil {
+			log.Printf("proxy: failed to set cache for key %s: %v\n", key, err)
 		}
 	}
 
