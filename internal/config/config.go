@@ -3,98 +3,92 @@ package config
 import (
 	"fmt"
 	"log"
-	"strings"
+
+	"github.com/go-viper/mapstructure/v2"
+	"github.com/iamolegga/enviper"
+	"github.com/joho/godotenv"
 
 	"github.com/spf13/viper"
 )
 
+const (
+	defaultEnvFile = ".env"
+	tagName        = "config"
+)
+
 type Config struct {
-	DB           DBConfig      `mapstructure:"DB"`
-	Server       ServerConfig  `mapstructure:"SERVER"`
-	Weather      WeatherConfig `mapstructure:"WEATHER"`
-	Email        EmailConfig   `mapstructure:"EMAIL"`
-	OpenMeteoUrl string        `mapstructure:"OPEN_METEO_URL"`
-	GeoCodingUrl string        `mapstructure:"GEO_CODING_URL"`
-	Redis        RedisConfig   `mapstructure:"REDIS"`
+	DB           DBConfig      `config:"db"`
+	Server       ServerConfig  `config:"server"`
+	Weather      WeatherConfig `config:"weather"`
+	Email        EmailConfig   `config:"email"`
+	OpenMeteoUrl string        `config:"open_meteo_url"`
+	GeoCodingUrl string        `config:"geo_coding_url"`
+	Redis        RedisConfig   `config:"redis"`
 }
 
 type DBConfig struct {
-	Host     string `mapstructure:"HOST"`
-	Port     string `mapstructure:"PORT"`
-	User     string `mapstructure:"USER"`
-	Password string `mapstructure:"PASSWORD"`
-	Name     string `mapstructure:"NAME"`
+	Host     string `config:"host"`
+	Port     string `config:"port"`
+	User     string `config:"user"`
+	Password string `config:"password"`
+	Name     string `config:"name"`
 }
 
 type ServerConfig struct {
-	Host string `mapstructure:"HOST"`
-	Port string `mapstructure:"PORT"`
+	Host string `config:"host"`
+	Port string `config:"port"`
 }
 
 type WeatherConfig struct {
-	ApiUrl string `mapstructure:"API_URL"`
-	ApiKey string `mapstructure:"API_KEY"`
+	ApiUrl string `config:"api_url"`
+	ApiKey string `config:"api_key"`
 }
 
 type EmailConfig struct {
-	Host     string `mapstructure:"HOST"`
-	Port     int    `mapstructure:"PORT"`
-	Username string `mapstructure:"USERNAME"`
-	Password string `mapstructure:"PASSWORD"`
-	From     string `mapstructure:"FROM"`
+	Host     string `config:"host"`
+	Port     int    `config:"port"`
+	Username string `config:"username"`
+	Password string `config:"password"`
+	From     string `config:"from"`
 }
 
 type RedisConfig struct {
-	Address  string `mapstructure:"ADDRESS"`
-	Password string `mapstructure:"PASSWORD"`
-	DB       int    `mapstructure:"DB"`
+	Address  string `config:"address"`
+	Password string `config:"password"`
+	DB       int    `config:"db"`
 }
 
 func LoadConfig() (Config, error) {
-	viper.AutomaticEnv()
-	viper.SetConfigFile(".env")
-	err := viper.ReadInConfig()
-	if err != nil {
-		log.Print("No .env file found, binding individual environment variables.")
-		bindAllEnvVars()
+	if err := loadEnvFile(defaultEnvFile); err != nil {
+		log.Printf("warning: %v", err)
 	}
 
-	bindEnvKeysWithDots()
-
 	var config Config
-	err = viper.Unmarshal(&config)
-	if err != nil {
-		return Config{}, fmt.Errorf("failed to unmarshal config: %w", err)
+	if err := readConfig(&config); err != nil {
+		return Config{}, fmt.Errorf("failed to read config: %w", err)
 	}
 
 	return config, nil
 }
 
-func bindAllEnvVars() {
-	_ = viper.BindEnv("DB_HOST")
-	_ = viper.BindEnv("DB_PORT")
-	_ = viper.BindEnv("DB_USER")
-	_ = viper.BindEnv("DB_PASSWORD")
-	_ = viper.BindEnv("DB_NAME")
-	_ = viper.BindEnv("SERVER_HOST")
-	_ = viper.BindEnv("SERVER_PORT")
-	_ = viper.BindEnv("WEATHER_API_URL")
-	_ = viper.BindEnv("WEATHER_API_KEY")
-	_ = viper.BindEnv("EMAIL_HOST")
-	_ = viper.BindEnv("EMAIL_PORT")
-	_ = viper.BindEnv("EMAIL_USERNAME")
-	_ = viper.BindEnv("EMAIL_PASSWORD")
-	_ = viper.BindEnv("EMAIL_FROM")
-	_ = viper.BindEnv("OPEN_METEO_URL")
-	_ = viper.BindEnv("GEO_CODING_URL")
-	_ = viper.BindEnv("REDIS_ADDRESS")
-	_ = viper.BindEnv("REDIS_PASSWORD")
-	_ = viper.BindEnv("REDIS_DB")
+func loadEnvFile(path string) error {
+	if err := godotenv.Load(path); err != nil {
+		return fmt.Errorf("error loading .env file from %s: %w", path, err)
+	}
+
+	return nil
 }
 
-func bindEnvKeysWithDots() {
-	for _, key := range viper.AllKeys() {
-		dottedKey := strings.ToLower(strings.ReplaceAll(key, "_", "."))
-		viper.Set(dottedKey, viper.Get(key))
+func readConfig(config *Config) error {
+	v := enviper.New(viper.GetViper()).WithTagName(tagName)
+
+	confOption := func(c *mapstructure.DecoderConfig) {
+		c.Squash = true
 	}
+
+	if err := v.Unmarshal(config, confOption); err != nil {
+		return fmt.Errorf("unmarshaling: %w", err)
+	}
+
+	return nil
 }
