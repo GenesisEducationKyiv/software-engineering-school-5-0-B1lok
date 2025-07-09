@@ -5,13 +5,13 @@ package subscription
 
 import (
 	"context"
-	"net/http"
 	"testing"
 
 	"weather-api/internal/application/command"
 	"weather-api/internal/domain"
+	internalErrors "weather-api/internal/errors"
 	"weather-api/internal/test/mocks"
-	"weather-api/pkg/errors"
+	pkgErrors "weather-api/pkg/errors"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -80,7 +80,7 @@ func TestSubscriptionService_Subscribe_InvalidCity(t *testing.T) {
 		Frequency: "daily",
 	}
 
-	validationErr := errors.New("City not found", http.StatusNotFound)
+	validationErr := pkgErrors.New(internalErrors.ErrNotFound, "City not found")
 	mockValidator.On("Validate", "invalidcity").Return(nil, validationErr)
 
 	err := service.Subscribe(ctx, cmd)
@@ -122,9 +122,9 @@ func TestSubscriptionService_Subscribe_AlreadyExists(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Email already subscribed")
-	apiErr, ok := errors.IsAPIError(err)
+	apiErr, ok := pkgErrors.IsApiError(err)
 	assert.True(t, ok)
-	assert.Equal(t, http.StatusConflict, apiErr.Code)
+	assert.Equal(t, internalErrors.ErrConflict, apiErr.Base)
 
 	mockValidator.AssertExpectations(t)
 	mockRepo.AssertExpectations(t)
@@ -154,16 +154,16 @@ func TestSubscriptionService_Subscribe_RepositoryError(t *testing.T) {
 		City:      ValidatedCity,
 		Frequency: "daily",
 	}
-	repoErr := errors.New("Database connection failed", http.StatusInternalServerError)
+	repoErr := pkgErrors.New(internalErrors.ErrInternal, "failed to check if email exists")
 	mockRepo.On("ExistByLookup", ctx, lookup).Return(false, repoErr)
 
 	err := service.Subscribe(ctx, cmd)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check if email exists")
-	apiErr, ok := errors.IsAPIError(err)
+	apiErr, ok := pkgErrors.IsApiError(err)
 	assert.True(t, ok)
-	assert.Equal(t, http.StatusInternalServerError, apiErr.Code)
+	assert.Equal(t, internalErrors.ErrInternal, apiErr.Base)
 
 	mockValidator.AssertExpectations(t)
 	mockRepo.AssertExpectations(t)
@@ -199,10 +199,10 @@ func TestSubscriptionService_Subscribe_InvalidFrequency(t *testing.T) {
 	err := service.Subscribe(ctx, cmd)
 
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "Invalid input")
-	apiErr, ok := errors.IsAPIError(err)
+	assert.Contains(t, err.Error(), "invalid frequency value")
+	apiErr, ok := pkgErrors.IsApiError(err)
 	assert.True(t, ok)
-	assert.Equal(t, http.StatusBadRequest, apiErr.Code)
+	assert.Equal(t, internalErrors.ErrInvalidInput, apiErr.Base)
 
 	mockValidator.AssertExpectations(t)
 	mockRepo.AssertExpectations(t)
@@ -234,16 +234,16 @@ func TestSubscriptionService_Subscribe_CreateError(t *testing.T) {
 	}
 	mockRepo.On("ExistByLookup", ctx, lookup).Return(false, nil)
 
-	createErr := errors.New("Database error", http.StatusInternalServerError)
+	createErr := pkgErrors.New(internalErrors.ErrInternal, "Database error")
 	mockRepo.On("Create", ctx, mock.AnythingOfType("*domain.Subscription")).Return(nil, createErr)
 
 	err := service.Subscribe(ctx, cmd)
 
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to create subscription")
-	apiErr, ok := errors.IsAPIError(err)
+	assert.Contains(t, err.Error(), "Database error")
+	apiErr, ok := pkgErrors.IsApiError(err)
 	assert.True(t, ok)
-	assert.Equal(t, http.StatusInternalServerError, apiErr.Code)
+	assert.Equal(t, internalErrors.ErrInternal, apiErr.Base)
 
 	mockValidator.AssertExpectations(t)
 	mockRepo.AssertExpectations(t)
@@ -281,7 +281,7 @@ func TestSubscriptionService_Subscribe_EmailError(t *testing.T) {
 	}
 	mockRepo.On("Create", ctx, mock.AnythingOfType("*domain.Subscription")).Return(subscription, nil)
 
-	emailErr := errors.New("Failed to send email", http.StatusInternalServerError)
+	emailErr := pkgErrors.New(internalErrors.ErrInternal, "Failed to send email")
 	mockNotifier.On(
 		"NotifyConfirmation", mock.AnythingOfType("*domain.Subscription"),
 	).Return(emailErr)
@@ -353,9 +353,9 @@ func TestSubscriptionService_Confirm_TokenNotFound(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Token not found")
-	apiErr, ok := errors.IsAPIError(err)
+	apiErr, ok := pkgErrors.IsApiError(err)
 	assert.True(t, ok)
-	assert.Equal(t, http.StatusNotFound, apiErr.Code)
+	assert.Equal(t, internalErrors.ErrNotFound, apiErr.Base)
 
 	mockRepo.AssertExpectations(t)
 	mockRepo.AssertNotCalled(t, "Update")
@@ -372,16 +372,16 @@ func TestSubscriptionService_Confirm_RepositoryError(t *testing.T) {
 	ctx := context.Background()
 	token := validToken
 
-	repoErr := errors.New("Database error", http.StatusInternalServerError)
+	repoErr := pkgErrors.New(internalErrors.ErrInternal, "Database error")
 	mockRepo.On("FindByToken", ctx, token).Return(nil, repoErr)
 
 	err := service.Confirm(ctx, token)
 
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to find subscription")
-	apiErr, ok := errors.IsAPIError(err)
+	assert.Contains(t, err.Error(), "Database error")
+	apiErr, ok := pkgErrors.IsApiError(err)
 	assert.True(t, ok)
-	assert.Equal(t, http.StatusInternalServerError, apiErr.Code)
+	assert.Equal(t, internalErrors.ErrInternal, apiErr.Base)
 
 	mockRepo.AssertExpectations(t)
 	mockRepo.AssertNotCalled(t, "Update")
@@ -409,16 +409,16 @@ func TestSubscriptionService_Confirm_UpdateError(t *testing.T) {
 
 	mockRepo.On("FindByToken", ctx, token).Return(subscription, nil)
 
-	updateErr := errors.New("Update failed", http.StatusInternalServerError)
+	updateErr := pkgErrors.New(internalErrors.ErrInternal, "Update failed")
 	mockRepo.On("Update", ctx, mock.AnythingOfType("*domain.Subscription")).Return(nil, updateErr)
 
 	err := service.Confirm(ctx, token)
 
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to update subscription")
-	apiErr, ok := errors.IsAPIError(err)
+	assert.Contains(t, err.Error(), "Update failed")
+	apiErr, ok := pkgErrors.IsApiError(err)
 	assert.True(t, ok)
-	assert.Equal(t, http.StatusInternalServerError, apiErr.Code)
+	assert.Equal(t, internalErrors.ErrInternal, apiErr.Base)
 
 	mockRepo.AssertExpectations(t)
 }
@@ -469,9 +469,9 @@ func TestSubscriptionService_Unsubscribe_TokenNotFound(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Token not found")
-	apiErr, ok := errors.IsAPIError(err)
+	apiErr, ok := pkgErrors.IsApiError(err)
 	assert.True(t, ok)
-	assert.Equal(t, http.StatusNotFound, apiErr.Code)
+	assert.Equal(t, internalErrors.ErrNotFound, apiErr.Base)
 
 	mockRepo.AssertExpectations(t)
 	mockRepo.AssertNotCalled(t, "Delete")
@@ -488,16 +488,16 @@ func TestSubscriptionService_Unsubscribe_RepositoryError(t *testing.T) {
 	ctx := context.Background()
 	token := validToken
 
-	repoErr := errors.New("Database error", http.StatusInternalServerError)
+	repoErr := pkgErrors.New(internalErrors.ErrInternal, "Database error")
 	mockRepo.On("FindByToken", ctx, token).Return(nil, repoErr)
 
 	err := service.Unsubscribe(ctx, token)
 
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to find subscription")
-	apiErr, ok := errors.IsAPIError(err)
+	assert.Contains(t, err.Error(), "Database error")
+	apiErr, ok := pkgErrors.IsApiError(err)
 	assert.True(t, ok)
-	assert.Equal(t, http.StatusInternalServerError, apiErr.Code)
+	assert.Equal(t, internalErrors.ErrInternal, apiErr.Base)
 
 	mockRepo.AssertExpectations(t)
 	mockRepo.AssertNotCalled(t, "Delete")
@@ -525,7 +525,7 @@ func TestSubscriptionService_Unsubscribe_DeleteError(t *testing.T) {
 
 	mockRepo.On("FindByToken", ctx, token).Return(subscription, nil)
 
-	deleteErr := errors.New("Delete failed", http.StatusInternalServerError)
+	deleteErr := pkgErrors.New(internalErrors.ErrInternal, "Delete failed")
 	mockRepo.On("Delete", ctx, uint(1)).Return(deleteErr)
 
 	err := service.Unsubscribe(ctx, token)

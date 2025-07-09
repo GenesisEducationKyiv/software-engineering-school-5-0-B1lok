@@ -4,20 +4,27 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
+	geocodingapi "weather-api/internal/infrastructure/http/validator/providers/geo-coding-api"
+	weatherapisearch "weather-api/internal/infrastructure/http/validator/providers/weather-api-search"
+	weatherapi "weather-api/internal/infrastructure/http/weather/providers/weather-api"
+	"weather-api/pkg/logger"
+
 	"weather-api/internal/application/services/subscription"
-	"weather-api/internal/application/services/weather"
+	appWeather "weather-api/internal/application/services/weather"
+	"weather-api/internal/infrastructure/http/weather"
+	openmeteo "weather-api/internal/infrastructure/http/weather/providers/open-meteo"
 
 	appEmail "weather-api/internal/application/email"
 	"weather-api/internal/application/scheduled"
 	"weather-api/internal/config"
 	postgresconnector "weather-api/internal/infrastructure/db/postgres"
 	"weather-api/internal/infrastructure/email"
-	cityValidator "weather-api/internal/infrastructure/http/validator"
-	weatherapi "weather-api/internal/infrastructure/http/weather-api"
+	"weather-api/internal/infrastructure/http/validator"
 	"weather-api/internal/interface/rest"
 	"weather-api/pkg/middleware"
 
@@ -47,20 +54,36 @@ func run() error {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
+	// Initialize logger
+	fileLogger, err := logger.NewFileLogger("logs/weather-api.log")
+	if err != nil {
+		cancel()
+		return fmt.Errorf("failed to open log file: %w", err)
+	}
+
 	// Initialize infrastructure components
 	emailSender := email.NewEmailSender(email.CreateConfig(cfg))
 	txManager := middleware.NewTxManager(db)
-	cityValidatorImpl := cityValidator.NewCityValidator(cfg.WeatherApiUrl, cfg.WeatherApiKey)
+	geoCodingApiClient := geocodingapi.NewClient(cfg.GeoCodingUrl, fileLogger)
+	weatherApiSearchClient := weatherapisearch.NewClient(
+		cfg.WeatherApiUrl, cfg.WeatherApiKey, fileLogger)
+	geoCodingApiHandler := validator.NewHandler(geoCodingApiClient)
+	geoCodingApiHandler.SetNext(weatherApiSearchClient)
+	cityValidator := validator.NewCityValidator(geoCodingApiHandler)
 
 	// Initialize repositories
-	weatherRepo := weatherapi.NewWeatherRepository(cfg.WeatherApiUrl, cfg.WeatherApiKey)
+	weatherApiClient := weatherapi.NewClient(cfg.WeatherApiUrl, cfg.WeatherApiKey, fileLogger)
+	openMeteoApiClient := openmeteo.NewClient(cfg.OpenMeteoUrl, cfg.GeoCodingUrl, fileLogger)
+	openMeteoApiHandler := weather.NewHandler(openMeteoApiClient)
+	openMeteoApiHandler.SetNext(weatherApiClient)
+	weatherRepository := weather.NewRepository(openMeteoApiHandler)
 	subscriptionRepo := postgresconnector.NewSubscriptionRepository(db)
 
 	// Initialize services
 	emailNotifier := appEmail.NewNotifier(cfg.ServerHost, emailSender)
-	weatherService := weather.NewService(weatherRepo)
+	weatherService := appWeather.NewService(weatherRepository)
 	subscriptionService := subscription.NewService(
-		subscriptionRepo, cityValidatorImpl, emailNotifier, cfg.ServerHost)
+		subscriptionRepo, cityValidator, emailNotifier, cfg.ServerHost)
 
 	// Initialize controllers
 	weatherController := rest.NewWeatherController(weatherService)
@@ -69,9 +92,9 @@ func run() error {
 	// Initialize workers
 	jobManager := scheduled.NewJobManager(ctx)
 	jobManager.RegisterJob(scheduled.NewHourlyWeatherUpdateJob(
-		weatherRepo, subscriptionRepo, emailNotifier))
+		weatherRepository, subscriptionRepo, emailNotifier))
 	jobManager.RegisterJob(scheduled.NewDailyWeatherUpdateJob(
-		weatherRepo, subscriptionRepo, emailNotifier))
+		weatherRepository, subscriptionRepo, emailNotifier))
 	go jobManager.StartScheduler()
 
 	// Initialize router
@@ -93,6 +116,10 @@ func run() error {
 		api.GET("/confirm/:token", subscriptionController.Confirm)
 		api.GET("/unsubscribe/:token", subscriptionController.Unsubscribe)
 	}
+
+	router.GET("/healthz", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
 
 	go func() {
 		<-ctx.Done()

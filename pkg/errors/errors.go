@@ -2,37 +2,28 @@ package errors
 
 import "errors"
 
-type APIError struct {
-	Code        int    `json:"-"`
-	Description string `json:"description"`
-	Err         error  `json:"-"`
+type ApiError struct {
+	Message string
+	Base    error
 }
 
-func (e *APIError) Error() string {
-	return e.Description
+func (e *ApiError) Error() string {
+	return e.Message
 }
 
-func (e *APIError) Unwrap() error {
-	return e.Err
+func (e *ApiError) Unwrap() error {
+	return e.Base
 }
 
-func New(msg string, code int) *APIError {
-	return &APIError{
-		Code:        code,
-		Description: msg,
+func New(base error, message string) *ApiError {
+	return &ApiError{
+		Base:    base,
+		Message: message,
 	}
 }
 
-func Wrap(err error, msg string, code int) *APIError {
-	return &APIError{
-		Code:        code,
-		Description: msg,
-		Err:         err,
-	}
-}
-
-func IsAPIError(err error) (*APIError, bool) {
-	var apiErr *APIError
+func IsApiError(err error) (*ApiError, bool) {
+	var apiErr *ApiError
 	if errors.As(err, &apiErr) {
 		return apiErr, true
 	}

@@ -4,13 +4,12 @@
 package weather
 
 import (
-	"context"
-	"net/http"
 	"testing"
 
 	"weather-api/internal/domain"
+	internalErrors "weather-api/internal/errors"
 	"weather-api/internal/test/mocks"
-	"weather-api/pkg/errors"
+	pkgErrors "weather-api/pkg/errors"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -22,7 +21,6 @@ const (
 func TestWeatherService_GetWeather_Success(t *testing.T) {
 	mockRepo := new(mocks.MockWeatherRepository)
 	service := NewService(mockRepo)
-	ctx := context.Background()
 
 	mockWeather := &domain.Weather{
 		Temperature: 20.5,
@@ -30,9 +28,9 @@ func TestWeatherService_GetWeather_Success(t *testing.T) {
 		Description: "Partly Cloudy",
 	}
 
-	mockRepo.On("GetWeather", ctx, validatedCity).Return(mockWeather, nil)
+	mockRepo.On("GetWeather", validatedCity).Return(mockWeather, nil)
 
-	result, err := service.GetWeather(ctx, validatedCity)
+	result, err := service.GetWeather(validatedCity)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -45,13 +43,12 @@ func TestWeatherService_GetWeather_Success(t *testing.T) {
 func TestWeatherService_GetWeather_EmptyCity(t *testing.T) {
 	mockRepo := new(mocks.MockWeatherRepository)
 	service := NewService(mockRepo)
-	ctx := context.Background()
 	city := "invalid city123"
-	expectedErr := errors.New("invalid city123", http.StatusNotFound)
+	expectedErr := pkgErrors.New(internalErrors.ErrInvalidInput, "invalid city123")
 
-	mockRepo.On("GetWeather", ctx, city).Return(nil, expectedErr)
+	mockRepo.On("GetWeather", city).Return(nil, expectedErr)
 
-	result, err := service.GetWeather(ctx, city)
+	result, err := service.GetWeather(city)
 
 	assert.Error(t, err)
 	assert.Equal(t, expectedErr, err)

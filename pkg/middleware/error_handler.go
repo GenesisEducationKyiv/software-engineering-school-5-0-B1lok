@@ -1,13 +1,23 @@
 package middleware
 
 import (
-	"log"
+	"errors"
 	"net/http"
+	"time"
 
-	"weather-api/pkg/errors"
+	internalErrors "weather-api/internal/errors"
+	pkgErrors "weather-api/pkg/errors"
 
 	"github.com/gin-gonic/gin"
 )
+
+type HttpResponse struct {
+	Timestamp   string `json:"timestamp"`
+	Path        string `json:"path"`
+	Method      string `json:"method"`
+	Code        string `json:"code"`
+	Description string `json:"description"`
+}
 
 func ErrorHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -20,16 +30,45 @@ func ErrorHandler() gin.HandlerFunc {
 
 		err := errs[0].Err
 
-		if apiErr, ok := errors.IsAPIError(err); ok {
-			if apiErr.Code >= 500 {
-				log.Printf("[ERROR] %s (wrapped: %v)", apiErr.Description, apiErr.Err)
-			}
-			c.AbortWithStatusJSON(apiErr.Code, gin.H{"description": apiErr.Description})
-			return
-		}
-		log.Printf("[ERROR] unhandled error: %v", err)
-		c.AbortWithStatusJSON(
-			http.StatusInternalServerError, gin.H{"description": "Internal server error"},
+		var (
+			code        = "internal_error"
+			status      = http.StatusInternalServerError
+			description = "Internal server error"
 		)
+
+		if apiErr, ok := pkgErrors.IsApiError(err); ok {
+			code = apiErr.Base.Error()
+			description = apiErr.Message
+
+			if httpCode, found := ToHTTPStatus(apiErr.Base); found {
+				status = httpCode
+			}
+		}
+		resp := HttpResponse{
+			Timestamp:   time.Now().UTC().Format(time.RFC3339),
+			Path:        c.Request.URL.Path,
+			Method:      c.Request.Method,
+			Code:        code,
+			Description: description,
+		}
+
+		c.AbortWithStatusJSON(status, resp)
+	}
+}
+
+func ToHTTPStatus(err error) (int, bool) {
+	switch {
+	case errors.Is(err, internalErrors.ErrNotFound):
+		return http.StatusNotFound, true
+	case errors.Is(err, internalErrors.ErrConflict):
+		return http.StatusConflict, true
+	case errors.Is(err, internalErrors.ErrInvalidInput):
+		return http.StatusBadRequest, true
+	case errors.Is(err, internalErrors.ErrServiceUnavailable):
+		return http.StatusServiceUnavailable, true
+	case errors.Is(err, internalErrors.ErrInternal):
+		return http.StatusInternalServerError, true
+	default:
+		return http.StatusInternalServerError, false
 	}
 }

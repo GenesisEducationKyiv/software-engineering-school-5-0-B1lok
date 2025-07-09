@@ -8,7 +8,8 @@ import (
 	"weather-api/internal/application/command"
 	"weather-api/internal/interface/rest/dto/request"
 
-	"weather-api/pkg/errors"
+	internalErrors "weather-api/internal/errors"
+	pkgErrors "weather-api/pkg/errors"
 
 	"github.com/gin-gonic/gin"
 )
@@ -30,7 +31,7 @@ func NewSubscriptionController(service SubscriptionService) *SubscriptionControl
 func (s *SubscriptionController) Subscribe(c *gin.Context) {
 	var req request.SubscribeRequest
 	if err := c.ShouldBind(&req); err != nil {
-		c.Error(errors.New("Invalid input", http.StatusBadRequest)) //nolint:errcheck
+		c.Error(pkgErrors.New(internalErrors.ErrInvalidInput, "Invalid input")) //nolint:errcheck
 		return
 	}
 
@@ -46,7 +47,7 @@ func (s *SubscriptionController) Subscribe(c *gin.Context) {
 func (s *SubscriptionController) Confirm(c *gin.Context) {
 	token := c.Param("token")
 	if strings.TrimSpace(token) == "" {
-		c.Error(errors.New("Invalid token", http.StatusBadRequest)) //nolint:errcheck
+		c.Error(pkgErrors.New(internalErrors.ErrInvalidInput, "Invalid token")) //nolint:errcheck
 		return
 	}
 
@@ -62,7 +63,7 @@ func (s *SubscriptionController) Confirm(c *gin.Context) {
 func (s *SubscriptionController) Unsubscribe(c *gin.Context) {
 	token := c.Param("token")
 	if strings.TrimSpace(token) == "" {
-		c.Error(errors.New("Invalid token", http.StatusBadRequest)) //nolint:errcheck
+		c.Error(pkgErrors.New(internalErrors.ErrInvalidInput, "Invalid token")) //nolint:errcheck
 		return
 	}
 

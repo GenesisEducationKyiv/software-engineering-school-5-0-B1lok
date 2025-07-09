@@ -1,17 +1,15 @@
 package stubs
 
 import (
-	"context"
-	"net/http"
-
 	"weather-api/internal/domain"
-	"weather-api/pkg/errors"
+	internalErrors "weather-api/internal/errors"
+	pkgErrors "weather-api/pkg/errors"
 )
 
 type WeatherRepositoryStub struct {
-	GetWeatherFn        func(ctx context.Context, city string) (*domain.Weather, error)
-	GetDailyForecastFn  func(ctx context.Context, city string) (*domain.WeatherDaily, error)
-	GetHourlyForecastFn func(ctx context.Context, city string) (*domain.WeatherHourly, error)
+	GetWeatherFn        func(city string) (*domain.Weather, error)
+	GetDailyForecastFn  func(city string) (*domain.WeatherDaily, error)
+	GetHourlyForecastFn func(city string) (*domain.WeatherHourly, error)
 }
 
 func NewWeatherRepositoryStub() *WeatherRepositoryStub {
@@ -22,14 +20,12 @@ func NewWeatherRepositoryStub() *WeatherRepositoryStub {
 	}
 }
 
-func (s *WeatherRepositoryStub) GetWeather(ctx context.Context,
-	city string,
-) (*domain.Weather, error) {
+func (s *WeatherRepositoryStub) GetWeather(city string) (*domain.Weather, error) {
 	if s.GetWeatherFn != nil {
-		return s.GetWeatherFn(ctx, city)
+		return s.GetWeatherFn(city)
 	}
 	if city == "InvalidCity" {
-		return nil, errors.New("City not found", http.StatusNotFound)
+		return nil, pkgErrors.New(internalErrors.ErrNotFound, "City not found")
 	}
 	return &domain.Weather{
 		Temperature: 20.5,
@@ -38,11 +34,9 @@ func (s *WeatherRepositoryStub) GetWeather(ctx context.Context,
 	}, nil
 }
 
-func (s *WeatherRepositoryStub) GetDailyForecast(ctx context.Context,
-	city string,
-) (*domain.WeatherDaily, error) {
+func (s *WeatherRepositoryStub) GetDailyForecast(city string) (*domain.WeatherDaily, error) {
 	if s.GetDailyForecastFn != nil {
-		return s.GetDailyForecastFn(ctx, city)
+		return s.GetDailyForecastFn(city)
 	}
 	return &domain.WeatherDaily{
 		Location:   city,
@@ -59,11 +53,9 @@ func (s *WeatherRepositoryStub) GetDailyForecast(ctx context.Context,
 	}, nil
 }
 
-func (s *WeatherRepositoryStub) GetHourlyForecast(ctx context.Context,
-	city string,
-) (*domain.WeatherHourly, error) {
+func (s *WeatherRepositoryStub) GetHourlyForecast(city string) (*domain.WeatherHourly, error) {
 	if s.GetHourlyForecastFn != nil {
-		return s.GetHourlyForecastFn(ctx, city)
+		return s.GetHourlyForecastFn(city)
 	}
 	return &domain.WeatherHourly{
 		Location:   city,
