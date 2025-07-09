@@ -4,12 +4,12 @@ import (
 	"weather-api/internal/config"
 )
 
-func CreateConfig(cfg config.Config) EmailConfig {
+func CreateConfig(cfg config.EmailConfig) EmailConfig {
 	return EmailConfig{
-		Host:     cfg.EmailHost,
-		Port:     cfg.EmailPort,
-		Username: cfg.EmailUser,
-		Password: cfg.EmailPassword,
-		From:     cfg.EmailFrom,
+		Host:     cfg.Host,
+		Port:     cfg.Port,
+		Username: cfg.Username,
+		Password: cfg.Password,
+		From:     cfg.From,
 	}
 }

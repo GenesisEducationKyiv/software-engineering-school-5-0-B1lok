@@ -12,9 +12,12 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"weather-api/internal/infrastructure"
+	"weather-api/internal/infrastructure/db/redis/weather/ttl"
+
 	"weather-api/internal/infrastructure/prometheus"
 
-	geocodingapi "weather-api/internal/infrastructure/http/validator/providers/geo-coding-api"
+	geocodingapi "weather-api/internal/infrastructure/http/validator/providers/geocoding"
 	weatherapisearch "weather-api/internal/infrastructure/http/validator/providers/weather-api-search"
 	weatherapi "weather-api/internal/infrastructure/http/weather/providers/weather-api"
 	"weather-api/pkg/logger"
@@ -31,8 +34,6 @@ import (
 	"weather-api/internal/infrastructure/db/redis"
 	cacheValidator "weather-api/internal/infrastructure/db/redis/validator"
 	cacheClient "weather-api/internal/infrastructure/db/redis/weather"
-	cacheOpenmeteo "weather-api/internal/infrastructure/db/redis/weather/providers/open-meteo"
-	cacheWeather "weather-api/internal/infrastructure/db/redis/weather/providers/weather-api"
 	"weather-api/internal/infrastructure/email"
 	"weather-api/internal/infrastructure/http/validator"
 	"weather-api/internal/interface/rest"
@@ -56,15 +57,15 @@ func run() error {
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-	postgresconnector.RunMigrations(cfg)
+	postgresconnector.RunMigrations(cfg.DB)
 
-	db, err := postgresconnector.ConnectDB(cfg)
+	db, err := postgresconnector.ConnectDB(cfg.DB)
 	if err != nil {
 		cancel()
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	redisClient, err := redis.ConnectRedis(ctx, cfg)
+	redisClient, err := redis.NewClient(ctx, cfg.Redis)
 	if err != nil {
 		cancel()
 		return fmt.Errorf("failed to connect to redis: %w", err)
@@ -78,13 +79,13 @@ func run() error {
 	}
 
 	// Initialize infrastructure components
-	emailSender := email.NewEmailSender(email.CreateConfig(cfg))
+	emailSender := email.NewEmailSender(email.CreateConfig(cfg.Email))
 	txManager := middleware.NewTxManager(db)
 
 	validatorMetrics := prometheus.NewCacheMetrics("weather-api", "validator")
 	weatherMetrics := prometheus.NewCacheMetrics("weather-api", "weather")
 
-	geoCodingApiClient := geocodingapi.NewClient(cfg.GeoCodingUrl, fileLogger)
+	geoCodingApiClient := geocodingapi.NewClient(cfg.GeoCodingURL, fileLogger)
 	cachedGeoCodingClient := cacheValidator.NewProxyClient(
 		geoCodingApiClient,
 		redisClient,
@@ -94,7 +95,7 @@ func run() error {
 	)
 
 	weatherApiSearchClient := weatherapisearch.NewClient(
-		cfg.WeatherApiUrl, cfg.WeatherApiKey, fileLogger)
+		cfg.Weather.ApiURL, cfg.Weather.ApiKey, fileLogger)
 	cachedWeatherApiSearchClient := cacheValidator.NewProxyClient(
 		weatherApiSearchClient,
 		redisClient,
@@ -108,20 +109,30 @@ func run() error {
 	cityValidator := validator.NewCityValidator(geoCodingApiHandler)
 
 	// Initialize repositories
-	weatherApiClient := weatherapi.NewClient(cfg.WeatherApiUrl, cfg.WeatherApiKey, fileLogger)
+	weatherApiClient := weatherapi.NewClient(
+		cfg.Weather.ApiURL,
+		cfg.Weather.ApiKey,
+		fileLogger,
+		infrastructure.SystemClock{},
+	)
 	cachedWeatherApiClient := cacheClient.NewProxyClient(
 		weatherApiClient,
 		redisClient,
-		cacheWeather.NewTTLProvider(),
+		ttl.NewTTLProvider(15*time.Minute, infrastructure.SystemClock{}),
 		"weather-api",
 		weatherMetrics,
 	)
 
-	openMeteoApiClient := openmeteo.NewClient(cfg.OpenMeteoUrl, cfg.GeoCodingUrl, fileLogger)
+	openMeteoApiClient := openmeteo.NewClient(
+		cfg.OpenMeteoURL,
+		cfg.GeoCodingURL,
+		fileLogger,
+		infrastructure.SystemClock{},
+	)
 	cachedOpenMeteoApi := cacheClient.NewProxyClient(
 		openMeteoApiClient,
 		redisClient,
-		cacheOpenmeteo.NewTTLProvider(),
+		ttl.NewTTLProvider(1*time.Hour, infrastructure.SystemClock{}),
 		"open-meteo",
 		weatherMetrics,
 	)
@@ -132,10 +143,10 @@ func run() error {
 	subscriptionRepo := postgresconnector.NewSubscriptionRepository(db)
 
 	// Initialize services
-	emailNotifier := appEmail.NewNotifier(cfg.ServerHost, emailSender)
+	emailNotifier := appEmail.NewNotifier(cfg.Server.Host, emailSender)
 	weatherService := appWeather.NewService(weatherRepository)
 	subscriptionService := subscription.NewService(
-		subscriptionRepo, cityValidator, emailNotifier, cfg.ServerHost)
+		subscriptionRepo, cityValidator, emailNotifier, cfg.Server.Host)
 
 	// Initialize controllers
 	weatherController := rest.NewWeatherController(weatherService)
@@ -181,7 +192,7 @@ func run() error {
 		cancel()
 	}()
 
-	serverAddr := fmt.Sprintf(":%s", cfg.ServerPort)
+	serverAddr := fmt.Sprintf(":%s", cfg.Server.Port)
 	log.Printf("Server starting on %s", serverAddr)
 	if err := router.Run(serverAddr); err != nil {
 		return fmt.Errorf("failed to start server: %w", err)

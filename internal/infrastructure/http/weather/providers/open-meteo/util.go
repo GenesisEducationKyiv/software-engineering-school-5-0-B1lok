@@ -3,8 +3,12 @@ package open_meteo
 import "fmt"
 
 var currentWeatherParams = []string{"temperature_2m", "relative_humidity_2m", "weather_code"}
-var dailyForecastParams = []string{"weather_code", "temperature_2m_max",
-	"temperature_2m_min", "rain_sum", "snowfall_sum",
+var dailyForecastParams = []string{
+	"weather_code",
+	"temperature_2m_max",
+	"temperature_2m_min",
+	"rain_sum",
+	"snowfall_sum",
 }
 var hourlyForecastParams = []string{"temperature_2m", "rain", "snowfall", "weather_code"}
 

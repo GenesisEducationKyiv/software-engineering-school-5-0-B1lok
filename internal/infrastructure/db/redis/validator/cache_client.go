@@ -2,17 +2,19 @@ package validator
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
+
+	appRedis "weather-api/internal/infrastructure/db/redis"
 
 	"github.com/redis/go-redis/v9"
 )
 
 type Client interface {
-	Validate(city string) (*string, error)
+	Validate(ctx context.Context, city string) (*string, error)
 }
 
 type MetricsRecorder interface {
@@ -44,29 +46,28 @@ func NewProxyClient(
 	}
 }
 
-func (c *ProxyClient) Validate(city string) (*string, error) {
-	ctx := context.Background()
+func (c *ProxyClient) Validate(ctx context.Context, city string) (*string, error) {
 	key := fmt.Sprintf("%s:%s", c.prefix, strings.ToLower(city))
 
-	cached, err := c.redis.Get(ctx, key).Result()
+	cachedCity, err := appRedis.Get[string](ctx, c.redis, key)
 	if err == nil {
-		var cachedCity string
-		if err := json.Unmarshal([]byte(cached), &cachedCity); err == nil {
-			c.recorder.CacheHit()
-			return &cachedCity, nil
-		}
+		c.recorder.CacheHit()
+		return cachedCity, nil
 	}
+
 	if errors.Is(err, redis.Nil) {
 		c.recorder.CacheMiss()
 	}
-	cityValidated, err := c.delegate.Validate(city)
+
+	cityValidated, err := c.delegate.Validate(ctx, city)
 	if err != nil {
 		return nil, err
 	}
 
-	data, err := json.Marshal(cityValidated)
-	if err == nil {
-		_ = c.redis.Set(ctx, key, data, c.ttl).Err()
+	if cityValidated != nil {
+		if err := appRedis.Set(ctx, c.redis, key, cityValidated, c.ttl); err != nil {
+			log.Printf("validator: failed to cache cityValidated for key %s: %v\n", key, err)
+		}
 	}
 
 	return cityValidated, nil

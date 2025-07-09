@@ -1,6 +1,7 @@
 package weather_api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -18,22 +19,26 @@ type Logger interface {
 	LogResponse(provider string, resp *http.Response)
 }
 
+type Clock interface {
+	Now() time.Time
+}
+
 type Client struct {
 	apiKey  string
 	client  *http.Client
-	clock   appHttp.Clock
-	baseUrl string
+	clock   Clock
+	baseURL string
 	logger  Logger
 }
 
-func NewClient(apiUrl string, apiKey string, logger Logger) *Client {
+func NewClient(apiURL string, apiKey string, logger Logger, clock Clock) *Client {
 	client := &http.Client{
 		Timeout: defaultTimeout,
 	}
 	return &Client{apiKey: apiKey,
 		client:  client,
-		clock:   appHttp.SystemClock{},
-		baseUrl: apiUrl,
+		clock:   clock,
+		baseURL: apiURL,
 		logger:  logger,
 	}
 }
@@ -45,29 +50,25 @@ const (
 	defaultTimeout   = 10 * time.Second
 )
 
-func (r *Client) SetClock(clock appHttp.Clock) {
-	r.clock = clock
-}
-
-func (r *Client) GetWeather(city string) (*domain.Weather, error) {
+func (c *Client) GetWeather(ctx context.Context, city string) (*domain.Weather, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s",
-		r.baseUrl,
+		c.baseURL,
 		currentEndpoint,
-		r.apiKey,
+		c.apiKey,
 		url.QueryEscape(city),
 	)
-	resp, err := appHttp.Get(r.client, endpoint)
+	resp, err := appHttp.Get(ctx, c.client, endpoint)
 	if err != nil {
 		return nil, err
 	}
-	r.logger.LogResponse(providerName, resp)
+	c.logger.LogResponse(providerName, resp)
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
 			log.Println("Error closing response body:", err)
 		}
 	}()
 
-	if err := r.handleAPIResponse(resp); err != nil {
+	if err := c.handleAPIResponse(resp); err != nil {
 		return nil, err
 	}
 	var apiResponse WeatherRepositoryResponse
@@ -79,25 +80,25 @@ func (r *Client) GetWeather(city string) (*domain.Weather, error) {
 	return toWeather(&apiResponse), nil
 }
 
-func (r *Client) GetDailyForecast(city string) (*domain.WeatherDaily, error) {
+func (c *Client) GetDailyForecast(ctx context.Context, city string) (*domain.WeatherDaily, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s&days=1",
-		r.baseUrl,
+		c.baseURL,
 		forecastEndpoint,
-		r.apiKey,
+		c.apiKey,
 		url.QueryEscape(city),
 	)
-	resp, err := appHttp.Get(r.client, endpoint)
+	resp, err := appHttp.Get(ctx, c.client, endpoint)
 	if err != nil {
 		return nil, err
 	}
-	r.logger.LogResponse(providerName, resp)
+	c.logger.LogResponse(providerName, resp)
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
 			log.Println("Error closing response body:", err)
 		}
 	}()
 
-	if err := r.handleAPIResponse(resp); err != nil {
+	if err := c.handleAPIResponse(resp); err != nil {
 		return nil, err
 	}
 
@@ -110,25 +111,28 @@ func (r *Client) GetDailyForecast(city string) (*domain.WeatherDaily, error) {
 	return toWeatherDaily(&apiResponse), nil
 }
 
-func (r *Client) GetHourlyForecast(city string) (*domain.WeatherHourly, error) {
+func (c *Client) GetHourlyForecast(
+	ctx context.Context,
+	city string,
+) (*domain.WeatherHourly, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s&days=1",
-		r.baseUrl,
+		c.baseURL,
 		forecastEndpoint,
-		r.apiKey,
+		c.apiKey,
 		url.QueryEscape(city),
 	)
-	resp, err := appHttp.Get(r.client, endpoint)
+	resp, err := appHttp.Get(ctx, c.client, endpoint)
 	if err != nil {
 		return nil, err
 	}
-	r.logger.LogResponse(providerName, resp)
+	c.logger.LogResponse(providerName, resp)
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
 			log.Println("Error closing response body:", err)
 		}
 	}()
 
-	if err := r.handleAPIResponse(resp); err != nil {
+	if err := c.handleAPIResponse(resp); err != nil {
 		return nil, err
 	}
 
@@ -138,10 +142,10 @@ func (r *Client) GetHourlyForecast(city string) (*domain.WeatherHourly, error) {
 			internalErrors.ErrInternal, "failed to parse weather data",
 		)
 	}
-	return toWeatherHourly(&apiResponse, r.clock.Now()), nil
+	return toWeatherHourly(&apiResponse, c.clock.Now()), nil
 }
 
-func (r *Client) handleAPIResponse(resp *http.Response) error {
+func (c *Client) handleAPIResponse(resp *http.Response) error {
 	if resp.StatusCode != http.StatusOK {
 		var errResp struct {
 			Error struct {
