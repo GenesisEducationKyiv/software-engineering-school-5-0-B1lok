@@ -31,7 +31,7 @@ func (n *Notifier) NotifyDailyWeather(
 	emailData := &WeatherDailyEmail{
 		To:             subscription.Email,
 		Frequency:      string(subscription.Frequency),
-		UnsubscribeUrl: fmt.Sprintf("%s/api/unsubscribe/%s", n.host, subscription.Token),
+		UnsubscribeURL: fmt.Sprintf("%s/api/unsubscribe/%s", n.host, subscription.Token),
 		WeatherDaily:   weatherDaily,
 	}
 
@@ -43,7 +43,7 @@ func (n *Notifier) NotifyConfirmation(subscription *domain.Subscription) error {
 		To:        subscription.Email,
 		City:      subscription.City,
 		Frequency: string(subscription.Frequency),
-		Url:       fmt.Sprintf("%s/api/confirm/%s", n.host, subscription.Token),
+		URL:       fmt.Sprintf("%s/api/confirm/%s", n.host, subscription.Token),
 	}
 	if err := n.sender.ConfirmationEmail(confirmationEmail); err != nil {
 		return err
@@ -59,7 +59,7 @@ func (n *Notifier) NotifyHourlyWeather(
 	emailData := &WeatherHourlyEmail{
 		To:             subscription.Email,
 		Frequency:      string(subscription.Frequency),
-		UnsubscribeUrl: fmt.Sprintf("%s/api/unsubscribe/%s", n.host, subscription.Token),
+		UnsubscribeURL: fmt.Sprintf("%s/api/unsubscribe/%s", n.host, subscription.Token),
 		WeatherHourly:  weatherHourly,
 	}
 

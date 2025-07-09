@@ -1,6 +1,7 @@
-package geo_coding_api
+package geocoding
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -24,7 +25,7 @@ type Client struct {
 }
 
 const (
-	providerName   = "geo-coding-api"
+	providerName   = "geocoding"
 	defaultTimeout = 10 * time.Second
 )
 
@@ -41,10 +42,10 @@ type CityResponse struct {
 	} `json:"results"`
 }
 
-func (h *Client) Validate(city string) (*string, error) {
+func (h *Client) Validate(ctx context.Context, city string) (*string, error) {
 	endpoint := fmt.Sprintf("%s/search?name=%s&count=1", h.geoCodingUrl, city)
 
-	resp, err := appHttp.Get(h.client, endpoint)
+	resp, err := appHttp.Get(ctx, h.client, endpoint)
 	if err != nil {
 		return nil, err
 	}

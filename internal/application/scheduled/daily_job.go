@@ -14,7 +14,7 @@ type WeatherDailyNotifier interface {
 }
 
 type WeatherDailyReader interface {
-	GetDailyForecast(city string) (*domain.WeatherDaily, error)
+	GetDailyForecast(ctx context.Context, city string) (*domain.WeatherDaily, error)
 }
 
 type DailyWeatherUpdateJob struct {
@@ -26,8 +26,8 @@ func NewDailyWeatherUpdateJob(
 	subscriptionRepo GroupedSubscriptionReader,
 	notifier WeatherDailyNotifier,
 ) *DailyWeatherUpdateJob {
-	getWeatherFunc := func(city string) (*domain.WeatherDaily, error) {
-		return weatherRepo.GetDailyForecast(city)
+	getWeatherFunc := func(ctx context.Context, city string) (*domain.WeatherDaily, error) {
+		return weatherRepo.GetDailyForecast(ctx, city)
 	}
 
 	notifyFunc := func(

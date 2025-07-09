@@ -1,6 +1,7 @@
 package open_meteo
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -21,11 +22,15 @@ type Logger interface {
 	LogResponse(provider string, resp *http.Response)
 }
 
+type Clock interface {
+	Now() time.Time
+}
+
 type Client struct {
 	client       *http.Client
-	clock        appHttp.Clock
-	openMeteoUrl string
-	geoCodingUrl string
+	clock        Clock
+	openMeteoURL string
+	geoCodingURL string
 	logger       Logger
 }
 
@@ -37,30 +42,26 @@ const (
 	hourly         = "hourly"
 )
 
-func NewClient(openMeteoUrl string, geoCodingUrl string, logger Logger) *Client {
+func NewClient(openMeteoURL, geoCodingURL string, logger Logger, clock Clock) *Client {
 	client := &http.Client{
 		Timeout: defaultTimeout,
 	}
 	return &Client{
 		client:       client,
-		openMeteoUrl: openMeteoUrl,
-		clock:        appHttp.SystemClock{},
-		geoCodingUrl: geoCodingUrl,
+		openMeteoURL: openMeteoURL,
+		clock:        clock,
+		geoCodingURL: geoCodingURL,
 		logger:       logger,
 	}
 }
 
-func (h *Client) SetClock(clock appHttp.Clock) {
-	h.clock = clock
-}
-
-func (h *Client) GetWeather(city string) (*domain.Weather, error) {
-	coords, err := h.fetchCoordinates(city)
+func (h *Client) GetWeather(ctx context.Context, city string) (*domain.Weather, error) {
+	coords, err := h.fetchCoordinates(ctx, city)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := appHttp.Get(h.client, h.buildRequestUrl(coords, currentWeatherParams, current))
+	resp, err := appHttp.Get(ctx, h.client, h.buildRequestURL(coords, currentWeatherParams, current))
 	h.logger.LogResponse(providerName, resp)
 	if err != nil {
 		return nil, pkgErrors.New(
@@ -86,13 +87,13 @@ func (h *Client) GetWeather(city string) (*domain.Weather, error) {
 	return toWeather(&apiResponse), nil
 }
 
-func (h *Client) GetDailyForecast(city string) (*domain.WeatherDaily, error) {
-	coords, err := h.fetchCoordinates(city)
+func (h *Client) GetDailyForecast(ctx context.Context, city string) (*domain.WeatherDaily, error) {
+	coords, err := h.fetchCoordinates(ctx, city)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := appHttp.Get(h.client, h.buildRequestUrl(coords, dailyForecastParams, daily))
+	resp, err := appHttp.Get(ctx, h.client, h.buildRequestURL(coords, dailyForecastParams, daily))
 	h.logger.LogResponse(providerName, resp)
 	if err != nil {
 		return nil, pkgErrors.New(
@@ -118,13 +119,16 @@ func (h *Client) GetDailyForecast(city string) (*domain.WeatherDaily, error) {
 	return toWeatherDaily(&apiResponse, city), nil
 }
 
-func (h *Client) GetHourlyForecast(city string) (*domain.WeatherHourly, error) {
-	coords, err := h.fetchCoordinates(city)
+func (h *Client) GetHourlyForecast(
+	ctx context.Context,
+	city string,
+) (*domain.WeatherHourly, error) {
+	coords, err := h.fetchCoordinates(ctx, city)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := appHttp.Get(h.client, h.buildRequestUrl(coords, hourlyForecastParams, hourly))
+	resp, err := appHttp.Get(ctx, h.client, h.buildRequestURL(coords, hourlyForecastParams, hourly))
 	h.logger.LogResponse(providerName, resp)
 	if err != nil {
 		return nil, pkgErrors.New(
@@ -155,10 +159,10 @@ type coordinates struct {
 	longitude float64
 }
 
-func (h *Client) fetchCoordinates(city string) (*coordinates, error) {
-	endpoint := fmt.Sprintf("%s/search?name=%s&count=1", h.geoCodingUrl, city)
+func (h *Client) fetchCoordinates(ctx context.Context, city string) (*coordinates, error) {
+	endpoint := fmt.Sprintf("%s/search?name=%s&count=1", h.geoCodingURL, city)
 
-	resp, err := appHttp.Get(h.client, endpoint)
+	resp, err := appHttp.Get(ctx, h.client, endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -213,8 +217,8 @@ func (h *Client) handleAPIResponse(resp *http.Response) error {
 	return nil
 }
 
-func (h *Client) buildRequestUrl(coords *coordinates, params []string, forecast string) string {
-	baseURL := fmt.Sprintf("%s/forecast", h.openMeteoUrl)
+func (h *Client) buildRequestURL(coords *coordinates, params []string, forecast string) string {
+	baseURL := fmt.Sprintf("%s/forecast", h.openMeteoURL)
 
 	values := url.Values{}
 	values.Set("latitude", fmt.Sprintf("%f", coords.latitude))

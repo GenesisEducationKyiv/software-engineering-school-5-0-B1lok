@@ -8,19 +8,19 @@ type ConfirmationEmail struct {
 	To        string
 	City      string
 	Frequency string
-	Url       string
+	URL       string
 }
 
 type WeatherDailyEmail struct {
 	To             string
 	Frequency      string
-	UnsubscribeUrl string
+	UnsubscribeURL string
 	WeatherDaily   *domain.WeatherDaily
 }
 
 type WeatherHourlyEmail struct {
 	To             string
 	Frequency      string
-	UnsubscribeUrl string
+	UnsubscribeURL string
 	WeatherHourly  *domain.WeatherHourly
 }

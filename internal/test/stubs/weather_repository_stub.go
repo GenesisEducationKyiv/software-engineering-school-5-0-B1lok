@@ -1,12 +1,17 @@
 package stubs
 
 import (
+	"context"
+	"sync"
+
 	"weather-api/internal/domain"
 	internalErrors "weather-api/internal/errors"
 	pkgErrors "weather-api/pkg/errors"
 )
 
 type WeatherRepositoryStub struct {
+	callCount           map[string]int
+	mu                  sync.RWMutex
 	GetWeatherFn        func(city string) (*domain.Weather, error)
 	GetDailyForecastFn  func(city string) (*domain.WeatherDaily, error)
 	GetHourlyForecastFn func(city string) (*domain.WeatherHourly, error)
@@ -17,10 +22,17 @@ func NewWeatherRepositoryStub() *WeatherRepositoryStub {
 		GetWeatherFn:        nil,
 		GetDailyForecastFn:  nil,
 		GetHourlyForecastFn: nil,
+		callCount:           make(map[string]int),
 	}
 }
 
-func (s *WeatherRepositoryStub) GetWeather(city string) (*domain.Weather, error) {
+func (s *WeatherRepositoryStub) GetWeather(
+	ctx context.Context,
+	city string,
+) (*domain.Weather, error) {
+	s.mu.Lock()
+	s.callCount[city]++
+	s.mu.Unlock()
 	if s.GetWeatherFn != nil {
 		return s.GetWeatherFn(city)
 	}
@@ -34,7 +46,10 @@ func (s *WeatherRepositoryStub) GetWeather(city string) (*domain.Weather, error)
 	}, nil
 }
 
-func (s *WeatherRepositoryStub) GetDailyForecast(city string) (*domain.WeatherDaily, error) {
+func (s *WeatherRepositoryStub) GetDailyForecast(
+	ctx context.Context,
+	city string,
+) (*domain.WeatherDaily, error) {
 	if s.GetDailyForecastFn != nil {
 		return s.GetDailyForecastFn(city)
 	}
@@ -53,7 +68,10 @@ func (s *WeatherRepositoryStub) GetDailyForecast(city string) (*domain.WeatherDa
 	}, nil
 }
 
-func (s *WeatherRepositoryStub) GetHourlyForecast(city string) (*domain.WeatherHourly, error) {
+func (s *WeatherRepositoryStub) GetHourlyForecast(
+	ctx context.Context,
+	city string,
+) (*domain.WeatherHourly, error) {
 	if s.GetHourlyForecastFn != nil {
 		return s.GetHourlyForecastFn(city)
 	}
@@ -68,4 +86,16 @@ func (s *WeatherRepositoryStub) GetHourlyForecast(city string) (*domain.WeatherH
 		Condition:  "Partly cloudy",
 		Icon:       "cloudy.png",
 	}, nil
+}
+
+func (s *WeatherRepositoryStub) GetCallCount(city string) int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.callCount[city]
+}
+
+func (s *WeatherRepositoryStub) ResetCallCount() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.callCount = make(map[string]int)
 }

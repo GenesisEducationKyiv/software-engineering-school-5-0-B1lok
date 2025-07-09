@@ -50,14 +50,14 @@ func (suite *SubscriptionControllerTestSuite) SetupSuite() {
 	mappedPort, err := postgres.Container.MappedPort(ctx, "5432")
 	suite.Require().NoError(err)
 
-	cfg := config.Config{
-		DBUser:     "test",
-		DBPassword: "test",
-		DBHost:     host,
-		DBPort:     mappedPort.Port(),
-		DBName:     "testdb",
-		ServerHost: "localhost",
+	cfg := config.DBConfig{
+		User:     "test",
+		Password: "test",
+		Host:     host,
+		Port:     mappedPort.Port(),
+		Name:     "testdb",
 	}
+	serverHost := "localhost"
 
 	db, err := postgresconnector.ConnectDB(cfg)
 	suite.Require().NoError(err)
@@ -65,10 +65,10 @@ func (suite *SubscriptionControllerTestSuite) SetupSuite() {
 	postgresconnector.RunMigrationsWithPath(cfg, getMigrationPath())
 
 	cityValidator := stubs.NewCityValidatorStub()
-	emailNotifier := appEmail.NewNotifier(cfg.ServerHost, stubs.NewSenderStub())
+	emailNotifier := appEmail.NewNotifier(serverHost, stubs.NewSenderStub())
 	subscriptionRepo := postgresconnector.NewSubscriptionRepository(db)
 	subscriptionService := subscription.NewService(
-		subscriptionRepo, cityValidator, emailNotifier, cfg.ServerHost,
+		subscriptionRepo, cityValidator, emailNotifier, serverHost,
 	)
 	subscriptionController := rest.NewSubscriptionController(subscriptionService)
 	txManager := middleware.NewTxManager(db)

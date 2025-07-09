@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"context"
 	"net/http"
 
 	"weather-api/internal/application/query"
@@ -13,7 +14,7 @@ import (
 )
 
 type WeatherService interface {
-	GetWeather(city string) (*query.WeatherQueryResult, error)
+	GetWeather(ctx context.Context, city string) (*query.WeatherQueryResult, error)
 }
 
 type WeatherController struct {
@@ -32,7 +33,9 @@ func (h *WeatherController) GetWeather(c *gin.Context) {
 		c.Error(pkgErrors.New(internalErrors.ErrInvalidInput, "Invalid request")) //nolint:errcheck
 		return
 	}
-	weather, err := h.service.GetWeather(city)
+
+	ctx := c.Request.Context()
+	weather, err := h.service.GetWeather(ctx, city)
 	if err != nil {
 		c.Error(err) //nolint:errcheck
 		return

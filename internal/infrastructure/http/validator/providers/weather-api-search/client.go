@@ -1,6 +1,7 @@
-package weather_api_search
+package client
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -38,14 +39,14 @@ const (
 	defaultTimeout = 10 * time.Second
 )
 
-func (h *Client) Validate(city string) (*string, error) {
+func (h *Client) Validate(ctx context.Context, city string) (*string, error) {
 	endpoint := fmt.Sprintf("%s%s?key=%s&q=%s",
 		h.apiUrl,
 		searchEndpoint,
 		h.apiKey,
 		url.QueryEscape(city),
 	)
-	resp, err := appHttp.Get(h.client, endpoint)
+	resp, err := appHttp.Get(ctx, h.client, endpoint)
 	if err != nil {
 		return nil, err
 	}
