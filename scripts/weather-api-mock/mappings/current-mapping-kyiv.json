@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/current.json",
+    "queryParameters": {
+      "q": {
+        "equalTo": "Kyiv"
+      },
+      "key": {
+        "equalTo": "test_key"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "current-response.json",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

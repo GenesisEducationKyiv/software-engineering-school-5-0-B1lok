@@ -1,0 +1,57 @@
+{
+  "id": null,
+  "uid": "cache-dashboard",
+  "title": "Cache Metrics Dashboard",
+  "timezone": "browser",
+  "schemaVersion": 37,
+  "version": 1,
+  "refresh": "5s",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "Validator Cache Hits vs Misses",
+      "datasource": "Weather-Api Metrics",
+      "targets": [
+        {
+          "expr": "weather_api_validator_cache_hit",
+          "legendFormat": "validator_hit",
+          "refId": "A"
+        },
+        {
+          "expr": "weather_api_validator_cache_miss",
+          "legendFormat": "validator_miss",
+          "refId": "B"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "graph",
+      "title": "Weather Cache Hits vs Misses",
+      "datasource": "Weather-Api Metrics",
+      "targets": [
+        {
+          "expr": "weather_api_weather_cache_hit",
+          "legendFormat": "weather_hit",
+          "refId": "A"
+        },
+        {
+          "expr": "weather_api_weather_cache_miss",
+          "legendFormat": "weather_miss",
+          "refId": "B"
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      }
+    }
+  ]
+}

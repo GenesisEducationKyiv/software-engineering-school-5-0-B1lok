@@ -1,0 +1,37 @@
+version: "2"
+linters:
+  enable:
+    - gosec
+    - gocritic
+    - ineffassign
+    - unconvert
+    - gocyclo
+    - misspell
+    - unused
+    - prealloc
+    - bodyclose
+    - errcheck
+    - goconst
+    - whitespace
+    - lll
+  settings:
+    lll:
+      line-length: 100
+    gocyclo:
+      min-complexity: 10
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - weather-api
+run:
+  timeout: 3m
+  tests: true
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
