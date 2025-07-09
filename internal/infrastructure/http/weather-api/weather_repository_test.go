@@ -1,8 +1,13 @@
+//go:build unit
+// +build unit
+
 package weather_api
 
 import (
 	"context"
 	"encoding/json"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -10,9 +15,6 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func mockHTTPClient(response string, statusCode int) *http.Client {
@@ -47,7 +49,7 @@ func loadJSONFile(t *testing.T, filename string) string {
 func TestGetWeather(t *testing.T) {
 	mockResponse := loadJSONFile(t, "current_weather_response.json")
 
-	repo := NewWeatherRepository("dummy-api-key")
+	repo := NewWeatherRepository("http://mocked-weather-api.com", "dummy-api-key")
 	repo.client = mockHTTPClient(mockResponse, http.StatusOK)
 
 	weather, err := repo.GetWeather(context.Background(), "London")
@@ -61,7 +63,7 @@ func TestGetWeather(t *testing.T) {
 func TestGetDailyForecast(t *testing.T) {
 	mockResponse := loadJSONFile(t, "forecast_response.json")
 
-	repo := NewWeatherRepository("dummy-api-key")
+	repo := NewWeatherRepository("http://mocked-weather-api.com", "dummy-api-key")
 	repo.client = mockHTTPClient(mockResponse, http.StatusOK)
 
 	forecast, err := repo.GetDailyForecast(context.Background(), "London")
@@ -77,7 +79,7 @@ func TestGetDailyForecast(t *testing.T) {
 func TestGetHourlyForecast(t *testing.T) {
 	mockResponse := loadJSONFile(t, "forecast_response.json")
 
-	repo := NewWeatherRepository("dummy-api-key")
+	repo := NewWeatherRepository("http://mocked-weather-api.com", "dummy-api-key")
 	repo.client = mockHTTPClient(mockResponse, http.StatusOK)
 	repo.SetClock(MockClock{})
 
@@ -94,7 +96,7 @@ func TestGetHourlyForecast(t *testing.T) {
 func TestHandleAPIErrorResponse(t *testing.T) {
 	mockErrorResponse := loadJSONFile(t, "not_found_response.json")
 
-	repo := NewWeatherRepository("dummy-api-key")
+	repo := NewWeatherRepository("http://mocked-weather-api.com", "dummy-api-key")
 	repo.client = mockHTTPClient(mockErrorResponse, http.StatusBadRequest)
 
 	_, err := repo.GetWeather(context.Background(), "NonExistentCity")

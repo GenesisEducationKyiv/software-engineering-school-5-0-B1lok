@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/search.json",
+    "queryParameters": {
+      "q": {
+        "equalTo": "InvalidCity"
+      },
+      "key": {
+        "equalTo": "test_key"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": "[]",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

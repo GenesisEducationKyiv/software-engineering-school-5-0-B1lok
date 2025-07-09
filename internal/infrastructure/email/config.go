@@ -10,5 +10,6 @@ func CreateConfig(cfg config.Config) EmailConfig {
 		Port:     cfg.EmailPort,
 		Username: cfg.EmailUser,
 		Password: cfg.EmailPassword,
+		From:     cfg.EmailFrom,
 	}
 }

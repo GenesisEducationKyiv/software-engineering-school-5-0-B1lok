@@ -15,11 +15,13 @@ type Config struct {
 	DBName        string `mapstructure:"DB_NAME"`
 	ServerHost    string `mapstructure:"SERVER_HOST"`
 	ServerPort    string `mapstructure:"SERVER_PORT"`
+	WeatherApiUrl string `mapstructure:"WEATHER_API_URL"`
 	WeatherApiKey string `mapstructure:"WEATHER_API_KEY"`
 	EmailHost     string `mapstructure:"EMAIL_HOST"`
 	EmailPort     int    `mapstructure:"EMAIL_PORT"`
 	EmailUser     string `mapstructure:"EMAIL_USERNAME"`
 	EmailPassword string `mapstructure:"EMAIL_PASSWORD"`
+	EmailFrom     string `mapstructure:"EMAIL_FROM"`
 }
 
 func LoadConfig() (Config, error) {
@@ -48,9 +50,11 @@ func bindAllEnvVars() {
 	_ = viper.BindEnv("DB_NAME")
 	_ = viper.BindEnv("SERVER_HOST")
 	_ = viper.BindEnv("SERVER_PORT")
+	_ = viper.BindEnv("WEATHER_API_URL")
 	_ = viper.BindEnv("WEATHER_API_KEY")
 	_ = viper.BindEnv("EMAIL_HOST")
 	_ = viper.BindEnv("EMAIL_PORT")
 	_ = viper.BindEnv("EMAIL_USERNAME")
 	_ = viper.BindEnv("EMAIL_PASSWORD")
+	_ = viper.BindEnv("EMAIL_FROM")
 }
