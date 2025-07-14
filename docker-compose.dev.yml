@@ -1,7 +1,23 @@
 services:
-  server:
+  subscription-service:
     env_file:
-      - path: .env
+      - path: apps/subscription/.env
+        required: true
+  weather-service:
+    env_file:
+      - path: apps/weather/.env
+        required: true
+  gateway-service:
+    env_file:
+      - path: apps/gateway/.env
+        required: true
+  email-service:
+    env_file:
+      - path: apps/email/.env
+        required: true
+  notification-service:
+    env_file:
+      - path: apps/notification/.env
         required: true
 
 networks:
