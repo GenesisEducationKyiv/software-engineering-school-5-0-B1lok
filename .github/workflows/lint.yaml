@@ -9,6 +9,16 @@ jobs:
   golangci:
     name: lint
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        module:
+          - apps/subscription
+          - apps/weather
+          - apps/notification
+          - apps/gateway
+          - apps/email
+      fail-fast: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -18,3 +28,5 @@ jobs:
         uses: golangci/golangci-lint-action@v8
         with:
           version: v2.1
+          working-directory: ${{ matrix.module }}
+          args: --config=../../.golangci.yml

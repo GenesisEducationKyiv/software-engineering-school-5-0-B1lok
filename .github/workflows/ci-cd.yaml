@@ -24,7 +24,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/weather-api:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/weather-http-server:latest
   deploy:
     runs-on: ubuntu-latest
     if: ${{ vars.DISABLE_DEPLOY != 'true' }}
