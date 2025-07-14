@@ -1,0 +1,270 @@
+//go:build integration
+// +build integration
+
+package integration
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
+	"subscription-service/internal/application/services/subscription"
+	"subscription-service/internal/config"
+	"subscription-service/internal/domain"
+	appPostgres "subscription-service/internal/infrastructure/db/postgres"
+	"subscription-service/internal/interface/rest"
+	"subscription-service/internal/test/containers"
+	"subscription-service/internal/test/stubs"
+	"subscription-service/pkg/middleware"
+	"testing"
+
+	"github.com/gin-gonic/gin"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/stretchr/testify/suite"
+	"gorm.io/gorm"
+)
+
+type SubscriptionControllerTestSuite struct {
+	suite.Suite
+	Router   *gin.Engine
+	Postgres *containers.PostgresContainer
+	DB       *gorm.DB
+}
+
+func (suite *SubscriptionControllerTestSuite) SetupSuite() {
+	ctx := context.Background()
+
+	postgres, err := containers.SetupPostgresContainer(ctx)
+	suite.Require().NoError(err)
+	suite.Postgres = postgres
+	host, err := postgres.Container.Host(ctx)
+	suite.Require().NoError(err)
+
+	mappedPort, err := postgres.Container.MappedPort(ctx, "5432")
+	suite.Require().NoError(err)
+
+	cfg := config.DBConfig{
+		User:     "test",
+		Password: "test",
+		Host:     host,
+		Port:     mappedPort.Port(),
+		Name:     "testdb",
+	}
+
+	db, err := appPostgres.ConnectDB(cfg)
+	suite.Require().NoError(err)
+	suite.DB = db
+	appPostgres.RunMigrationsWithPath(cfg, getMigrationPath())
+
+	cityValidator := stubs.NewCityValidatorStub()
+	subscriptionRepo := appPostgres.NewSubscriptionRepository(db)
+	subscriptionService := subscription.NewService(
+		subscriptionRepo, cityValidator, stubs.NewConfirmationNotifierStub(),
+	)
+	subscriptionController := rest.NewSubscriptionController(subscriptionService)
+	txManager := middleware.NewTxManager(db)
+
+	router := gin.Default()
+	router.Use(middleware.HttpErrorHandler())
+	router.Use(middleware.HttpTransaction(txManager))
+
+	api := router.Group("/api")
+	{
+		api.POST("/subscribe", subscriptionController.Subscribe)
+		api.GET("/confirm/:token", subscriptionController.Confirm)
+		api.GET("/unsubscribe/:token", subscriptionController.Unsubscribe)
+	}
+
+	suite.Router = router
+}
+
+func (suite *SubscriptionControllerTestSuite) TearDownTest() {
+	result := suite.DB.Exec("DELETE FROM subscriptions")
+	suite.Require().NoError(result.Error)
+}
+
+func (suite *SubscriptionControllerTestSuite) insertTestData(data interface{}) {
+	result := suite.DB.Create(data)
+	suite.Require().NoError(result.Error)
+}
+
+func (suite *SubscriptionControllerTestSuite) TestSubscribe() {
+	formData := "email=test@example.com&city=London&frequency=daily"
+	body := strings.NewReader(formData)
+
+	req, reqErr := http.NewRequest(http.MethodPost, "/api/subscribe", body)
+	suite.Require().NoError(reqErr)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp := httptest.NewRecorder()
+	suite.Router.ServeHTTP(resp, req)
+
+	suite.Equal(http.StatusOK, resp.Code)
+
+	var count int64
+	err := suite.DB.Model(&domain.Subscription{}).
+		Where("email = ?", "test@example.com").Count(&count).Error
+	suite.Require().NoError(err)
+	suite.Equal(int64(1), count)
+}
+
+func (suite *SubscriptionControllerTestSuite) TestSubscribe_InvalidInput() {
+	formData := "email=test@example.com"
+	body := strings.NewReader(formData)
+
+	req, reqErr := http.NewRequest(http.MethodPost, "/api/subscribe", body)
+	suite.Require().NoError(reqErr)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp := httptest.NewRecorder()
+	suite.Router.ServeHTTP(resp, req)
+
+	suite.Equal(http.StatusBadRequest, resp.Code)
+	suite.Contains(resp.Body.String(), "Invalid input")
+}
+
+func (suite *SubscriptionControllerTestSuite) TestSubscribe_EmailAlreadySubscribed() {
+	formData := "email=test@example.com&city=London&frequency=daily"
+	body := strings.NewReader(formData)
+
+	req1, reqErr := http.NewRequest(http.MethodPost, "/api/subscribe", body)
+	suite.Require().NoError(reqErr)
+	req1.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp1 := httptest.NewRecorder()
+	suite.Router.ServeHTTP(resp1, req1)
+	suite.Equal(http.StatusOK, resp1.Code)
+
+	bodyDuplicate := strings.NewReader(formData)
+	req2, req2Err := http.NewRequest(http.MethodPost, "/api/subscribe", bodyDuplicate)
+	suite.Require().NoError(req2Err)
+	req2.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp2 := httptest.NewRecorder()
+	suite.Router.ServeHTTP(resp2, req2)
+
+	suite.Equal(http.StatusConflict, resp2.Code)
+	suite.Contains(resp2.Body.String(), "Email already subscribed")
+}
+
+func (suite *SubscriptionControllerTestSuite) TestConfirmSubscription() {
+	token := "test-token"
+	suite.insertTestData(&domain.Subscription{
+		Email:     "test@example.com",
+		City:      "London",
+		Frequency: "daily",
+		Token:     token,
+		Confirmed: false,
+	})
+
+	req, reqErr := http.NewRequest(http.MethodGet, fmt.Sprintf("/api/confirm/%s", token), nil)
+	suite.Require().NoError(reqErr)
+	resp := httptest.NewRecorder()
+	suite.Router.ServeHTTP(resp, req)
+
+	suite.Equal(http.StatusOK, resp.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(resp.Body.Bytes(), &response)
+	suite.Require().NoError(err)
+	suite.Contains(response, "message")
+
+	var subscription domain.Subscription
+	err = suite.DB.Where("token = ?", token).First(&subscription).Error
+	suite.Require().NoError(err)
+	suite.True(subscription.Confirmed)
+}
+
+func (suite *SubscriptionControllerTestSuite) TestConfirmSubscription_InvalidToken() {
+	req, reqErr := http.NewRequest(http.MethodGet, "/api/confirm/ ", nil)
+	suite.Require().NoError(reqErr)
+	resp := httptest.NewRecorder()
+	suite.Router.ServeHTTP(resp, req)
+
+	suite.Equal(http.StatusBadRequest, resp.Code)
+	suite.Contains(resp.Body.String(), "Invalid token")
+}
+
+func (suite *SubscriptionControllerTestSuite) TestConfirmSubscription_TokenNotFound() {
+	nonExistentToken := "non-existent-token"
+	req, reqErr := http.NewRequest(
+		http.MethodGet, fmt.Sprintf("/api/confirm/%s", nonExistentToken), nil,
+	)
+	suite.Require().NoError(reqErr)
+	resp := httptest.NewRecorder()
+	suite.Router.ServeHTTP(resp, req)
+
+	suite.Equal(http.StatusNotFound, resp.Code)
+	suite.Contains(resp.Body.String(), "Token not found")
+}
+
+func (suite *SubscriptionControllerTestSuite) TestUnsubscribe() {
+	token := "test-token"
+	suite.insertTestData(&domain.Subscription{
+		Email:     "test@example.com",
+		City:      "London",
+		Frequency: "daily",
+		Token:     token,
+		Confirmed: true,
+	})
+
+	req, reqErr := http.NewRequest(http.MethodGet, fmt.Sprintf("/api/unsubscribe/%s", token), nil)
+	suite.Require().NoError(reqErr)
+	resp := httptest.NewRecorder()
+	suite.Router.ServeHTTP(resp, req)
+
+	suite.Equal(http.StatusOK, resp.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(resp.Body.Bytes(), &response)
+	suite.Require().NoError(err)
+	suite.Contains(response, "message")
+
+	var count int64
+	err = suite.DB.Model(&domain.Subscription{}).Where("token = ?", token).Count(&count).Error
+	suite.Require().NoError(err)
+	suite.Equal(int64(0), count)
+}
+
+func (suite *SubscriptionControllerTestSuite) TestUnsubscribe_InvalidToken() {
+	req, reqErr := http.NewRequest(http.MethodGet, "/api/unsubscribe/ ", nil)
+	suite.Require().NoError(reqErr)
+	resp := httptest.NewRecorder()
+	suite.Router.ServeHTTP(resp, req)
+
+	suite.Equal(http.StatusBadRequest, resp.Code)
+	suite.Contains(resp.Body.String(), "Invalid token")
+}
+
+func (suite *SubscriptionControllerTestSuite) TestUnsubscribe_TokenNotFound() {
+	nonExistentToken := "non-existent-token"
+	req, reqErr := http.NewRequest(http.MethodGet, fmt.Sprintf(
+		"/api/unsubscribe/%s", nonExistentToken), nil,
+	)
+	suite.Require().NoError(reqErr)
+	resp := httptest.NewRecorder()
+	suite.Router.ServeHTTP(resp, req)
+
+	suite.Equal(http.StatusNotFound, resp.Code)
+	suite.Contains(resp.Body.String(), "Token not found")
+}
+
+func TestSubscriptionControllerTestSuite(t *testing.T) {
+	suite.Run(t, new(SubscriptionControllerTestSuite))
+}
+
+func getMigrationPath() string {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Failed to get working directory: %v", err)
+	}
+	projectRoot := filepath.Join(workingDir, "../../..")
+	migrationsPath := filepath.Join(projectRoot, "migrations")
+	return fmt.Sprintf("file://%s", filepath.ToSlash(migrationsPath))
+}
