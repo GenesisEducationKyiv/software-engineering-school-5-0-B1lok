@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package subscription;
+
+option go_package = "github.com/B1lok/proto-contracts/proto/subscription;subscription";
+
+service SubscriptionService {
+  rpc Subscribe(SubscribeRequest) returns (ResponseMessage);
+  rpc Confirm(TokenRequest) returns (ResponseMessage);
+  rpc Unsubscribe(TokenRequest) returns (ResponseMessage);
+}
+
+message SubscribeRequest {
+  string email = 1;
+  string city = 2;
+  string frequency = 3;
+}
+
+message TokenRequest {
+  string token = 1;
+}
+
+message ResponseMessage {
+  string message = 1;
+}

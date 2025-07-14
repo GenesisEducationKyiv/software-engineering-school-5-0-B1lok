@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package validator;
+
+option go_package = "github.com/B1lok/proto-contracts/proto/validator;validator";
+
+service CityValidationService {
+  rpc Validate(CityRequest) returns (CityResponse);
+}
+
+message CityRequest {
+  string city = 1;
+}
+
+message CityResponse {
+  string city = 1;
+}
