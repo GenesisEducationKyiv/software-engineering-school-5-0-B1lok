@@ -6,6 +6,13 @@ import (
 	"github.com/rabbitmq/amqp091-go"
 )
 
+type QueueOptions struct {
+	Durable    bool
+	AutoDelete bool
+	Exclusive  bool
+	NoWait     bool
+}
+
 const (
 	ConfirmationQueue  = "confirmation"
 	WeatherHourlyQueue = "weather.hourly"
@@ -15,6 +22,22 @@ const (
 	EmailWeatherHourlyQueue = "email.weather.hourly.send"
 	EmailWeatherDailyQueue  = "email.weather.daily.send"
 )
+
+var queues = []string{
+	ConfirmationQueue,
+	WeatherHourlyQueue,
+	WeatherDailyQueue,
+	EmailConfirmationQueue,
+	EmailWeatherHourlyQueue,
+	EmailWeatherDailyQueue,
+}
+
+var defaultQueueOptions = QueueOptions{
+	Durable:    true,
+	AutoDelete: false,
+	Exclusive:  false,
+	NoWait:     false,
+}
 
 func NewConnection(url string) (*amqp091.Connection, error) {
 	conn, err := amqp091.Dial(url)
@@ -36,34 +59,21 @@ func NewChannel(conn *amqp091.Connection) (*amqp091.Channel, error) {
 }
 
 func DeclareQueues(ch *amqp091.Channel) error {
-	if err := declareQueue(ch, ConfirmationQueue); err != nil {
-		return err
-	}
-	if err := declareQueue(ch, WeatherHourlyQueue); err != nil {
-		return err
-	}
-	if err := declareQueue(ch, WeatherDailyQueue); err != nil {
-		return err
-	}
-	if err := declareQueue(ch, EmailConfirmationQueue); err != nil {
-		return err
-	}
-	if err := declareQueue(ch, EmailWeatherHourlyQueue); err != nil {
-		return err
-	}
-	if err := declareQueue(ch, EmailWeatherDailyQueue); err != nil {
-		return err
+	for _, q := range queues {
+		if err := declareQueue(ch, q, defaultQueueOptions); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func declareQueue(ch *amqp091.Channel, name string) error {
+func declareQueue(ch *amqp091.Channel, name string, opts QueueOptions) error {
 	_, err := ch.QueueDeclare(
 		name,
-		true,
-		false,
-		false,
-		false,
+		opts.Durable,
+		opts.AutoDelete,
+		opts.Exclusive,
+		opts.NoWait,
 		nil,
 	)
 	if err != nil {
