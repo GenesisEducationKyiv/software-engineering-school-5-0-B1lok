@@ -20,5 +20,16 @@ jobs:
       - name: Set up Docker
         uses: docker/setup-buildx-action@v3
 
+      - name: Install protoc and plugins
+        run: |
+          sudo apt update
+          sudo apt install -y protobuf-compiler
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+          export PATH=$PATH:$(go env GOPATH)/bin
+
+      - name: Generate gRPC and Protobuf files
+        run: make proto-gen-all
+
       - name: Run tests
         run: make integration

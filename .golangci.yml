@@ -27,7 +27,11 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - weather-api
+        - weather
+        - email
+        - subscription
+        - notification
+        - gateway
 run:
   timeout: 3m
   tests: true
