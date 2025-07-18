@@ -114,8 +114,8 @@ func run() error {
 
 	s := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			middleware.GrpcErrorInterceptor(),
-			middleware.GrpcTransaction(txManager),
+			middleware.GRPCErrorInterceptor(),
+			middleware.GRPCTransaction(txManager),
 		),
 	)
 

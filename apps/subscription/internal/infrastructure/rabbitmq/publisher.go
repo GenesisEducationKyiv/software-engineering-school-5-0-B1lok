@@ -63,11 +63,9 @@ func (p *Publisher) NotifyWeatherUpdate(subscription *domain.Subscription) error
 	if err != nil {
 		return fmt.Errorf("failed to marshal message: %w", err)
 	}
-	var queueName string
+	queueName := weatherDailyQueue
 	if subscription.Frequency == domain.FrequencyHourly {
 		queueName = weatherHourlyQueue
-	} else {
-		queueName = weatherDailyQueue
 	}
 
 	err = p.channel.Publish(

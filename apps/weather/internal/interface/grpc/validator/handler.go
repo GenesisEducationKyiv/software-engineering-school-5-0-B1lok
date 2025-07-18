@@ -12,7 +12,6 @@ type CityValidator interface {
 }
 
 type Handler struct {
-	UnimplementedCityValidationServiceServer
 	validator CityValidator
 }
 

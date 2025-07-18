@@ -50,7 +50,7 @@ func (p *Publisher) DailyUpdate(
 	msg := toDailyUpdateMessage(updateMsg, &update)
 
 	if err := p.publish(rabbitmq.EmailWeatherDailyQueue, msg); err != nil {
-		return fmt.Errorf("failed to publish hourly update message: %w", err)
+		return fmt.Errorf("failed to publish daily update message: %w", err)
 	}
 
 	return nil
@@ -74,7 +74,7 @@ func (p *Publisher) HourlyUpdate(
 	return nil
 }
 
-func (p *Publisher) publish(queueName string, message interface{}) error {
+func (p *Publisher) publish(queueName string, message any) error {
 	body, err := json.Marshal(message)
 	if err != nil {
 		return fmt.Errorf("failed to marshal message: %w", err)

@@ -6,7 +6,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func GrpcTransaction(txManager TxManager) grpc.UnaryServerInterceptor {
+func GRPCTransaction(txManager TxManager) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
 		req any,

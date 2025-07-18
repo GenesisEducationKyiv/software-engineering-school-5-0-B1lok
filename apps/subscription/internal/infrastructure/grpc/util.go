@@ -16,16 +16,16 @@ func MapGrpcErrorToDomain(err error) error {
 		)
 	}
 
-	msg := st.Message()
-
-	switch st.Code() {
-	case codes.InvalidArgument:
-		return pkgErrors.New(internalErrors.ErrInvalidInput, msg)
-	case codes.NotFound:
-		return pkgErrors.New(internalErrors.ErrNotFound, msg)
-	case codes.AlreadyExists:
-		return pkgErrors.New(internalErrors.ErrConflict, msg)
-	default:
-		return pkgErrors.New(internalErrors.ErrInvalidInput, msg)
+	errorMapping := map[codes.Code]error{
+		codes.InvalidArgument: internalErrors.ErrInvalidInput,
+		codes.NotFound:        internalErrors.ErrNotFound,
+		codes.AlreadyExists:   internalErrors.ErrConflict,
 	}
+
+	mappedError, exists := errorMapping[st.Code()]
+	if !exists {
+		mappedError = internalErrors.ErrInvalidInput
+	}
+
+	return pkgErrors.New(mappedError, st.Message())
 }

@@ -11,7 +11,8 @@ import (
 
 type GroupedSubscriptionReader interface {
 	FindGroupedSubscriptions(
-		ctx context.Context, frequency *domain.Frequency,
+		ctx context.Context,
+		frequency *domain.Frequency,
 	) ([]*domain.GroupedSubscription, error)
 }
 
@@ -43,7 +44,7 @@ func (e *WeatherJobExecutor) Execute(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
-	errorHappened := false
+	hasErrorHappened := false
 	groupedSubscriptions, err := e.subscriptionRepo.FindGroupedSubscriptions(ctx, &e.frequency)
 	if err != nil {
 		return err
@@ -59,13 +60,13 @@ func (e *WeatherJobExecutor) Execute(ctx context.Context) error {
 				err := e.notifier.NotifyWeatherUpdate(sub)
 				if err != nil {
 					log.Printf("failed to notify weather update: %v", err)
-					errorHappened = true
+					hasErrorHappened = true
 				}
 			}
 		}
 	}
 
-	if errorHappened {
+	if hasErrorHappened {
 		return fmt.Errorf("some notifications failed for frequency: %s", e.frequency)
 	}
 

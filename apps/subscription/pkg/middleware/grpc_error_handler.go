@@ -12,7 +12,7 @@ import (
 	pkgErrors "subscription-service/pkg/errors"
 )
 
-func GrpcErrorInterceptor() grpc.UnaryServerInterceptor {
+func GRPCErrorInterceptor() grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
 		req interface{},

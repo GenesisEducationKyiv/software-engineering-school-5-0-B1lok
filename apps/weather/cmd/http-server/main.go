@@ -74,7 +74,10 @@ func run() error {
 	)
 
 	weatherApiSearchClient := client.NewClient(
-		cfg.Weather.ApiURL, cfg.Weather.ApiKey, fileLogger)
+		cfg.Weather.ApiURL,
+		cfg.Weather.ApiKey,
+		fileLogger,
+	)
 	cachedWeatherApiSearchClient := cacheValidator.NewProxyClient(
 		weatherApiSearchClient,
 		redisClient,
