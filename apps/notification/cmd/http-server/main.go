@@ -83,15 +83,15 @@ func run() error {
 
 	emailPublisher := publisher.NewPublisher(rabbitmqChannel, appWeatherClient)
 	worker := consumer.NewWorker(rabbitmqChannel, emailPublisher)
-	if err := worker.StartConfirmationConsumer(); err != nil {
+	if err := worker.StartConfirmationConsumer(ctx); err != nil {
 		cancel()
 		return fmt.Errorf("failed to start confirmation worker: %w", err)
 	}
-	if err := worker.StartHourlyUpdateConsumer(); err != nil {
+	if err := worker.StartHourlyUpdateConsumer(ctx); err != nil {
 		cancel()
 		return fmt.Errorf("failed to start hourly update worker: %w", err)
 	}
-	if err := worker.StartDailyUpdateConsumer(); err != nil {
+	if err := worker.StartDailyUpdateConsumer(ctx); err != nil {
 		cancel()
 		return fmt.Errorf("failed to start daily update worker: %w", err)
 	}

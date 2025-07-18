@@ -59,15 +59,15 @@ func run() error {
 
 	emailSender := email.NewEmailSender(cfg.Email)
 	consumer := rabbitmq.NewConsumer(rabbitmqChannel, emailSender)
-	if err := consumer.StartConfirmationConsumer(); err != nil {
+	if err := consumer.StartConfirmationConsumer(ctx); err != nil {
 		cancel()
 		return fmt.Errorf("failed to start confirmation worker: %w", err)
 	}
-	if err := consumer.StartHourlyUpdateConsumer(); err != nil {
+	if err := consumer.StartHourlyUpdateConsumer(ctx); err != nil {
 		cancel()
 		return fmt.Errorf("failed to start hourly update worker: %w", err)
 	}
-	if err := consumer.StartDailyUpdateConsumer(); err != nil {
+	if err := consumer.StartDailyUpdateConsumer(ctx); err != nil {
 		cancel()
 		return fmt.Errorf("failed to start daily update worker: %w", err)
 	}

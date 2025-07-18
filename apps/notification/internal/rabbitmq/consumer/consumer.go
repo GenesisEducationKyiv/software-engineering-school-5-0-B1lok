@@ -32,16 +32,16 @@ func NewWorker(channel *amqp091.Channel, sender Sender) *Worker {
 	}
 }
 
-func (w *Worker) StartConfirmationConsumer() error {
-	return w.consume(rabbitmq.ConfirmationQueue, w.handleConfirmationEmail)
+func (w *Worker) StartConfirmationConsumer(ctx context.Context) error {
+	return w.consume(ctx, rabbitmq.ConfirmationQueue, w.handleConfirmationEmail)
 }
 
-func (w *Worker) StartHourlyUpdateConsumer() error {
-	return w.consume(rabbitmq.WeatherHourlyQueue, w.handleWeatherUpdate(w.sender.HourlyUpdate))
+func (w *Worker) StartHourlyUpdateConsumer(ctx context.Context) error {
+	return w.consume(ctx, rabbitmq.WeatherHourlyQueue, w.handleWeatherUpdate(w.sender.HourlyUpdate))
 }
 
-func (w *Worker) StartDailyUpdateConsumer() error {
-	return w.consume(rabbitmq.WeatherDailyQueue, w.handleWeatherUpdate(w.sender.DailyUpdate))
+func (w *Worker) StartDailyUpdateConsumer(ctx context.Context) error {
+	return w.consume(ctx, rabbitmq.WeatherDailyQueue, w.handleWeatherUpdate(w.sender.DailyUpdate))
 }
 
 func (w *Worker) handleConfirmationEmail(msg amqp091.Delivery) error {
@@ -69,7 +69,7 @@ func (w *Worker) handleWeatherUpdate(
 	}
 }
 
-func (w *Worker) consume(queueName string, handler MessageHandler) error {
+func (w *Worker) consume(ctx context.Context, queueName string, handler MessageHandler) error {
 	msgs, err := w.channel.Consume(
 		queueName,
 		"",
@@ -84,17 +84,28 @@ func (w *Worker) consume(queueName string, handler MessageHandler) error {
 	}
 
 	go func() {
-		for msg := range msgs {
-			if err := handler(msg); err != nil {
-				log.Printf("failed to handle message from queue %s: %v", queueName, err)
-				if nackErr := msg.Nack(false, false); nackErr != nil {
-					log.Printf("failed to nack message: %v", nackErr)
-				}
-				continue
-			}
+		for {
+			select {
+			case <-ctx.Done():
+				log.Printf("Stopping consumer for queue %s", queueName)
+				return
 
-			if ackErr := msg.Ack(false); ackErr != nil {
-				log.Printf("failed to ack message: %v", ackErr)
+			case msg, ok := <-msgs:
+				if !ok {
+					log.Printf("Channel closed, stopping consumer for queue %s", queueName)
+					return
+				}
+				if err := handler(msg); err != nil {
+					log.Printf("failed to handle message from queue %s: %v", queueName, err)
+					if nackErr := msg.Nack(false, false); nackErr != nil {
+						log.Printf("failed to nack message: %v", nackErr)
+					}
+					continue
+				}
+
+				if ackErr := msg.Ack(false); ackErr != nil {
+					log.Printf("failed to ack message: %v", ackErr)
+				}
 			}
 		}
 	}()

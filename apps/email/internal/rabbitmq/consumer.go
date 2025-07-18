@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -26,16 +27,16 @@ func NewConsumer(channel *amqp091.Channel, sender Sender) *Consumer {
 	}
 }
 
-func (c *Consumer) StartConfirmationConsumer() error {
-	return c.consume(emailConfirmationQueue, c.handleConfirmationEmail)
+func (c *Consumer) StartConfirmationConsumer(ctx context.Context) error {
+	return c.consume(ctx, emailConfirmationQueue, c.handleConfirmationEmail)
 }
 
-func (c *Consumer) StartHourlyUpdateConsumer() error {
-	return c.consume(emailWeatherHourlyQueue, c.handleHourlyUpdate)
+func (c *Consumer) StartHourlyUpdateConsumer(ctx context.Context) error {
+	return c.consume(ctx, emailWeatherHourlyQueue, c.handleHourlyUpdate)
 }
 
-func (c *Consumer) StartDailyUpdateConsumer() error {
-	return c.consume(emailWeatherDailyQueue, c.handleDailyUpdate)
+func (c *Consumer) StartDailyUpdateConsumer(ctx context.Context) error {
+	return c.consume(ctx, emailWeatherDailyQueue, c.handleDailyUpdate)
 }
 
 func (c *Consumer) handleConfirmationEmail(msg amqp091.Delivery) error {
@@ -81,7 +82,7 @@ func (c *Consumer) handleDailyUpdate(msg amqp091.Delivery) error {
 	)
 }
 
-func (c *Consumer) consume(queueName string, handler MessageHandler) error {
+func (c *Consumer) consume(ctx context.Context, queueName string, handler MessageHandler) error {
 	msgs, err := c.channel.Consume(
 		queueName,
 		"",
