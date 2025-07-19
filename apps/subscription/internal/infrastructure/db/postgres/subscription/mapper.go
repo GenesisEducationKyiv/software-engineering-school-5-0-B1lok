@@ -1,15 +1,15 @@
-package postgres
+package subscription
 
 import (
 	"subscription-service/internal/domain"
 )
 
-func toEntity(subscription *domain.Subscription) *SubscriptionEntity {
+func toEntity(subscription *domain.Subscription) *Entity {
 	if subscription == nil {
 		return nil
 	}
 
-	return &SubscriptionEntity{
+	return &Entity{
 		ID:        subscription.ID,
 		Email:     subscription.Email,
 		City:      subscription.City,
@@ -21,7 +21,7 @@ func toEntity(subscription *domain.Subscription) *SubscriptionEntity {
 	}
 }
 
-func toDomain(entity *SubscriptionEntity) (*domain.Subscription, error) {
+func toDomain(entity *Entity) (*domain.Subscription, error) {
 	if entity == nil {
 		return nil, nil
 	}
@@ -40,7 +40,7 @@ func toDomain(entity *SubscriptionEntity) (*domain.Subscription, error) {
 	return subscription, nil
 }
 
-func toDomainList(entities []SubscriptionEntity) ([]*domain.Subscription, error) {
+func toDomainList(entities []Entity) ([]*domain.Subscription, error) {
 	if entities == nil {
 		return nil, nil
 	}

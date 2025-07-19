@@ -1,4 +1,4 @@
-package postgres
+package subscription
 
 import (
 	"time"
@@ -6,7 +6,7 @@ import (
 	"subscription-service/internal/domain"
 )
 
-type SubscriptionEntity struct {
+type Entity struct {
 	ID        uint `gorm:"primaryKey"`
 	Email     string
 	City      string
@@ -17,6 +17,6 @@ type SubscriptionEntity struct {
 	UpdatedAt time.Time
 }
 
-func (SubscriptionEntity) TableName() string {
+func (Entity) TableName() string {
 	return "subscriptions"
 }

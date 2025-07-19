@@ -1,4 +1,4 @@
-package postgres
+package subscription
 
 import (
 	"context"
@@ -12,15 +12,15 @@ import (
 	"gorm.io/gorm"
 )
 
-type SubscriptionRepository struct {
+type Repository struct {
 	db *gorm.DB
 }
 
-func NewSubscriptionRepository(db *gorm.DB) *SubscriptionRepository {
-	return &SubscriptionRepository{db: db}
+func NewRepository(db *gorm.DB) *Repository {
+	return &Repository{db: db}
 }
 
-func (r *SubscriptionRepository) Create(
+func (r *Repository) Create(
 	ctx context.Context, subscription *domain.Subscription,
 ) (*domain.Subscription, error) {
 	entity := toEntity(subscription)
@@ -41,13 +41,13 @@ func (r *SubscriptionRepository) Create(
 	return saved, nil
 }
 
-func (r *SubscriptionRepository) ExistByLookup(
+func (r *Repository) ExistByLookup(
 	ctx context.Context, lookup *domain.SubscriptionLookup,
 ) (bool, error) {
 	var count int64
 	db := r.getDB(ctx)
 	err := db.
-		Model(&SubscriptionEntity{}).
+		Model(&Entity{}).
 		Where("email = ? AND city = ? AND frequency = ?", lookup.Email, lookup.City, lookup.Frequency).
 		Count(&count).Error
 	if err != nil {
@@ -58,7 +58,7 @@ func (r *SubscriptionRepository) ExistByLookup(
 	return count > 0, nil
 }
 
-func (r *SubscriptionRepository) Update(
+func (r *Repository) Update(
 	ctx context.Context, subscription *domain.Subscription,
 ) (*domain.Subscription, error) {
 	entity := toEntity(subscription)
@@ -77,9 +77,9 @@ func (r *SubscriptionRepository) Update(
 	return toDomain(entity)
 }
 
-func (r *SubscriptionRepository) Delete(ctx context.Context, id uint) error {
+func (r *Repository) Delete(ctx context.Context, id uint) error {
 	db := r.getDB(ctx)
-	result := db.Delete(&SubscriptionEntity{}, id)
+	result := db.Delete(&Entity{}, id)
 	if result.Error != nil {
 		return pkgErrors.New(
 			internalErrors.ErrInternal, "failed to delete subscription",
@@ -93,10 +93,10 @@ func (r *SubscriptionRepository) Delete(ctx context.Context, id uint) error {
 	return nil
 }
 
-func (r *SubscriptionRepository) FindByToken(
+func (r *Repository) FindByToken(
 	ctx context.Context, token string,
 ) (*domain.Subscription, error) {
-	var entity SubscriptionEntity
+	var entity Entity
 	db := r.getDB(ctx)
 	result := db.Where("token = ?", token).First(&entity)
 
@@ -112,10 +112,10 @@ func (r *SubscriptionRepository) FindByToken(
 	return toDomain(&entity)
 }
 
-func (r *SubscriptionRepository) FindGroupedSubscriptions(
+func (r *Repository) FindGroupedSubscriptions(
 	ctx context.Context, frequency *domain.Frequency,
 ) ([]*domain.GroupedSubscription, error) {
-	var subscriptions []SubscriptionEntity
+	var subscriptions []Entity
 	db := r.getDB(ctx)
 
 	err := db.
@@ -127,7 +127,7 @@ func (r *SubscriptionRepository) FindGroupedSubscriptions(
 		)
 	}
 
-	subscriptionMap := make(map[string][]SubscriptionEntity)
+	subscriptionMap := make(map[string][]Entity)
 	for _, sub := range subscriptions {
 		subscriptionMap[sub.City] = append(subscriptionMap[sub.City], sub)
 	}
@@ -147,7 +147,7 @@ func (r *SubscriptionRepository) FindGroupedSubscriptions(
 	return grouped, nil
 }
 
-func (r *SubscriptionRepository) getDB(ctx context.Context) *gorm.DB {
+func (r *Repository) getDB(ctx context.Context) *gorm.DB {
 	if tx, ok := middleware.GetTx(ctx); ok {
 		return tx
 	}
