@@ -14,6 +14,7 @@ type publishRequest struct {
 	ctx     context.Context
 	queue   string
 	payload []byte
+	headers map[string]interface{}
 	done    chan error
 }
 
@@ -42,12 +43,25 @@ func NewPublisher(channel *amqp091.Channel) (*Publisher, error) {
 
 func (p *Publisher) startPublisherLoop() {
 	for req := range p.requests {
-		err := p.publishWithConfirm(req.ctx, req.queue, req.payload)
+		err := p.publishWithConfirm(req.ctx, req.queue, req.payload, req.headers)
 		req.done <- err
 	}
 }
 
-func (p *Publisher) publishWithConfirm(ctx context.Context, queue string, payload []byte) error {
+func (p *Publisher) publishWithConfirm(
+	ctx context.Context,
+	queue string,
+	payload []byte,
+	headers map[string]interface{},
+) error {
+	var amqpHeaders amqp091.Table
+	if headers != nil {
+		amqpHeaders = amqp091.Table{}
+		for k, v := range headers {
+			amqpHeaders[k] = v
+		}
+	}
+
 	err := p.channel.PublishWithContext(
 		ctx,
 		"",
@@ -57,6 +71,7 @@ func (p *Publisher) publishWithConfirm(ctx context.Context, queue string, payloa
 		amqp091.Publishing{
 			ContentType: "application/json",
 			Body:        payload,
+			Headers:     amqpHeaders,
 		},
 	)
 	if err != nil {
@@ -78,6 +93,15 @@ func (p *Publisher) publishWithConfirm(ctx context.Context, queue string, payloa
 }
 
 func (p *Publisher) Publish(ctx context.Context, queue string, payload []byte) error {
+	return p.PublishWithHeaders(ctx, queue, payload, nil)
+}
+
+func (p *Publisher) PublishWithHeaders(
+	ctx context.Context,
+	queue string,
+	payload []byte,
+	headers map[string]interface{},
+) error {
 	done := make(chan error, 1)
 
 	select {
@@ -85,6 +109,7 @@ func (p *Publisher) Publish(ctx context.Context, queue string, payload []byte) e
 		ctx:     ctx,
 		queue:   queue,
 		payload: payload,
+		headers: headers,
 		done:    done,
 	}:
 	case <-ctx.Done():

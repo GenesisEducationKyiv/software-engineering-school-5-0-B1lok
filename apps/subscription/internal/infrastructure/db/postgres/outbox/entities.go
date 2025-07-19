@@ -1,6 +1,7 @@
 package outbox
 
 import (
+	"github.com/google/uuid"
 	"time"
 
 	"gorm.io/datatypes"
@@ -20,6 +21,7 @@ const (
 type Message struct {
 	ID          uint           `gorm:"primaryKey"`
 	AggregateID uint           `gorm:"not null"`
+	MessageID   uuid.UUID      `gorm:"type:uuid"`
 	EventType   EventType      `gorm:"type:event_type_enum;not null"`
 	Payload     datatypes.JSON `gorm:"type:jsonb;not null"`
 	Status      Status         `gorm:"type:status_enum;default:'new'"`

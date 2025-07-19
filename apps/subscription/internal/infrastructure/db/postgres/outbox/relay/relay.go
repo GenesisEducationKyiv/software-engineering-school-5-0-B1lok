@@ -11,7 +11,12 @@ import (
 const batchSize = 10
 
 type Publisher interface {
-	Publish(ctx context.Context, queue string, payload []byte) error
+	PublishWithHeaders(
+		ctx context.Context,
+		queue string,
+		payload []byte,
+		headers map[string]interface{},
+	) error
 }
 
 type OutboxRepository interface {
@@ -56,7 +61,15 @@ func (r Relay) Run(ctx context.Context) error {
 			return nil
 		}
 		for _, msg := range messages {
-			err := r.publisher.Publish(txCtx, string(msg.EventType), msg.Payload)
+			headers := map[string]interface{}{
+				"message_id": msg.MessageID.String(),
+			}
+			err := r.publisher.PublishWithHeaders(
+				txCtx,
+				string(msg.EventType),
+				msg.Payload,
+				headers,
+			)
 			newStatus := outbox.StatusSuccess
 			if err != nil {
 				newStatus = outbox.StatusFailed

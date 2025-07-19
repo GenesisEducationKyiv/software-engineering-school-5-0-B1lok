@@ -29,11 +29,10 @@ func NewUserSubscribedHandler(host string, saver Saver) *UserSubscribedHandler {
 }
 
 type userSubscribedPayload struct {
-	MessageId  uuid.UUID `json:"message_id"`
-	Email      string    `json:"email"`
-	City       string    `json:"city"`
-	Frequency  string    `json:"frequency"`
-	ConfirmUrl string    `json:"url"`
+	Email      string `json:"email"`
+	City       string `json:"city"`
+	Frequency  string `json:"frequency"`
+	ConfirmUrl string `json:"url"`
 }
 
 func (u *UserSubscribedHandler) Handle(ctx context.Context, evt event.Event) error {
@@ -62,7 +61,6 @@ func (u *UserSubscribedHandler) toOutboxMessage(
 	e *subscription.UserSubscribedEvent,
 ) (outbox.Message, error) {
 	payload := userSubscribedPayload{
-		MessageId:  uuid.New(),
 		Email:      e.Email,
 		City:       e.City,
 		Frequency:  string(e.Frequency),
@@ -75,6 +73,7 @@ func (u *UserSubscribedHandler) toOutboxMessage(
 	}
 
 	return outbox.Message{
+		MessageID:   uuid.New(),
 		AggregateID: e.ID,
 		EventType:   outbox.EventUserSubscribed,
 		Payload:     data,

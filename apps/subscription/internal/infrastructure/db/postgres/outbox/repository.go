@@ -36,7 +36,7 @@ func (r *Repository) GetPendingMessages(ctx context.Context, limit int) ([]Messa
 	var messages []Message
 
 	err := db.Raw(`
-			SELECT id, aggregate_id, event_type, payload, status, created_at, updated_at 
+			SELECT id, aggregate_id, message_id, event_type, payload, status, created_at, updated_at 
 			FROM outbox 
 			WHERE status IN (?, ?) 
 			ORDER BY created_at 

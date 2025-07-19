@@ -63,6 +63,7 @@ func (s *Service) Subscribe(
 		return err
 	}
 	if err := s.dispatcher.Dispatch(ctx, &subscription.UserSubscribedEvent{
+		ID:        newSubscription.ID,
 		Email:     newSubscription.Email,
 		City:      newSubscription.City,
 		Frequency: newSubscription.Frequency,
