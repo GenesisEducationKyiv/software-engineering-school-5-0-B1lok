@@ -10,12 +10,12 @@ type DailyWeatherUpdateJob struct {
 
 func NewDailyWeatherUpdateJob(
 	subscriptionRepo GroupedSubscriptionReader,
-	notifier Notifier,
+	dispatcher EventDispatcher,
 ) *DailyWeatherUpdateJob {
 	exec := NewWeatherJobExecutor(
 		subscriptionRepo,
 		"daily",
-		notifier,
+		dispatcher,
 	)
 
 	return &DailyWeatherUpdateJob{

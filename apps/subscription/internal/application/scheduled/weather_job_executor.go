@@ -6,6 +6,9 @@ import (
 	"log"
 	"time"
 
+	"subscription-service/internal/application/event"
+	"subscription-service/internal/application/event/subscription"
+
 	"subscription-service/internal/domain"
 )
 
@@ -16,25 +19,25 @@ type GroupedSubscriptionReader interface {
 	) ([]*domain.GroupedSubscription, error)
 }
 
-type Notifier interface {
-	NotifyWeatherUpdate(subscription *domain.Subscription) error
+type EventDispatcher interface {
+	Dispatch(ctx context.Context, event event.Event) error
 }
 
 type WeatherJobExecutor struct {
 	subscriptionRepo GroupedSubscriptionReader
 	frequency        domain.Frequency
-	notifier         Notifier
+	dispatcher       EventDispatcher
 }
 
 func NewWeatherJobExecutor(
 	subscriptionRepo GroupedSubscriptionReader,
 	frequency domain.Frequency,
-	notifier Notifier,
+	dispatcher EventDispatcher,
 ) *WeatherJobExecutor {
 	return &WeatherJobExecutor{
 		subscriptionRepo: subscriptionRepo,
 		frequency:        frequency,
-		notifier:         notifier,
+		dispatcher:       dispatcher,
 	}
 }
 
@@ -57,9 +60,14 @@ func (e *WeatherJobExecutor) Execute(ctx context.Context) error {
 				log.Printf("context cancelled: %v", ctx.Err())
 				return ctx.Err()
 			default:
-				err := e.notifier.NotifyWeatherUpdate(sub)
+				err := e.dispatcher.Dispatch(ctx, &subscription.WeatherUpdatedEvent{
+					Email:     sub.Email,
+					City:      sub.City,
+					Frequency: sub.Frequency,
+					Token:     sub.Token,
+				})
 				if err != nil {
-					log.Printf("failed to notify weather update: %v", err)
+					log.Printf("failed to dispatch weather update: %v", err)
 					hasErrorHappened = true
 				}
 			}
