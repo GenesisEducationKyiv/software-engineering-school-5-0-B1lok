@@ -9,6 +9,12 @@ import (
 	"os/signal"
 	"syscall"
 
+	"subscription-service/internal/application/event"
+	"subscription-service/internal/infrastructure/db/postgres/outbox"
+	pgevent "subscription-service/internal/infrastructure/db/postgres/outbox/event"
+	"subscription-service/internal/infrastructure/db/postgres/outbox/relay"
+	pgsubscription "subscription-service/internal/infrastructure/db/postgres/subscription"
+
 	_ "github.com/B1lok/proto-contracts"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -20,6 +26,7 @@ import (
 	"subscription-service/internal/infrastructure/db/postgres"
 	"subscription-service/internal/infrastructure/grpc/validator"
 	"subscription-service/internal/infrastructure/rabbitmq"
+	rbevent "subscription-service/internal/infrastructure/rabbitmq/event"
 	grpcsubscription "subscription-service/internal/interface/grpc/subscription"
 	"subscription-service/pkg/middleware"
 )
@@ -82,18 +89,26 @@ func run() error {
 		}
 	}()
 
-	if err := rabbitmq.DeclareQueues(rabbitmqChannel); err != nil {
+	if err := rabbitmq.DeclareQueues(rabbitmqChannel, rabbitmq.GetAppQueueConfigs()); err != nil {
 		cancel()
 		return fmt.Errorf("failed to declare RabbitMQ queues: %w", err)
 	}
 
 	// Initialize repositories
-	subscriptionRepo := postgres.NewSubscriptionRepository(db)
+	subscriptionRepo := pgsubscription.NewRepository(db)
+	outboxRepo := outbox.NewOutboxRepository(db)
 
 	// Initialize services
-	publisher := rabbitmq.NewPublisher(rabbitmqChannel, cfg.Server.Host)
+	publisher, err := rabbitmq.NewPublisher(rabbitmqChannel)
+	if err != nil {
+		cancel()
+		return fmt.Errorf("failed to create RabbitMQ publisher: %w", err)
+	}
+	dispatcher := event.NewDispatcher()
+	dispatcher.Register(pgevent.NewUserSubscribedHandler(cfg.Server.Host, outboxRepo))
+	dispatcher.Register(rbevent.NewWeatherUpdateHandler(cfg.Server.Host, publisher))
 	subscriptionService := subscription.NewService(
-		subscriptionRepo, cityValidator, publisher)
+		subscriptionRepo, cityValidator, dispatcher)
 
 	// Initialize handlers
 	subscriptionHandler := grpcsubscription.NewHandler(subscriptionService)
@@ -101,9 +116,10 @@ func run() error {
 	// Initialize workers
 	jobManager := scheduled.NewJobManager(ctx)
 	jobManager.RegisterJob(scheduled.NewHourlyWeatherUpdateJob(
-		subscriptionRepo, publisher))
+		subscriptionRepo, dispatcher))
 	jobManager.RegisterJob(scheduled.NewDailyWeatherUpdateJob(
-		subscriptionRepo, publisher))
+		subscriptionRepo, dispatcher))
+	jobManager.RegisterJob(relay.NewRelayJob(publisher, txManager, outboxRepo))
 	go jobManager.StartScheduler()
 
 	// Initialize server

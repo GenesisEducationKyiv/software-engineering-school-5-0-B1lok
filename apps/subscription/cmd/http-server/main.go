@@ -8,6 +8,12 @@ import (
 	"os/signal"
 	"syscall"
 
+	"subscription-service/internal/application/event"
+	"subscription-service/internal/infrastructure/db/postgres/outbox"
+	pgevent "subscription-service/internal/infrastructure/db/postgres/outbox/event"
+	pgsubscription "subscription-service/internal/infrastructure/db/postgres/subscription"
+	rbevent "subscription-service/internal/infrastructure/rabbitmq/event"
+
 	"subscription-service/internal/application/scheduled"
 	"subscription-service/internal/application/services/subscription"
 	"subscription-service/internal/config"
@@ -82,18 +88,26 @@ func run() error {
 		}
 	}()
 
-	if err := rabbitmq.DeclareQueues(rabbitmqChannel); err != nil {
+	if err := rabbitmq.DeclareQueues(rabbitmqChannel, rabbitmq.GetAppQueueConfigs()); err != nil {
 		cancel()
 		return fmt.Errorf("failed to declare RabbitMQ queues: %w", err)
 	}
 
 	// Initialize repositories
-	subscriptionRepo := postgres.NewSubscriptionRepository(db)
+	subscriptionRepo := pgsubscription.NewRepository(db)
+	outboxRepo := outbox.NewOutboxRepository(db)
 
 	// Initialize services
-	publisher := rabbitmq.NewPublisher(rabbitmqChannel, cfg.Server.Host)
+	publisher, err := rabbitmq.NewPublisher(rabbitmqChannel)
+	if err != nil {
+		cancel()
+		return fmt.Errorf("failed to create RabbitMQ publisher: %w", err)
+	}
+	dispatcher := event.NewDispatcher()
+	dispatcher.Register(pgevent.NewUserSubscribedHandler(cfg.Server.Host, outboxRepo))
+	dispatcher.Register(rbevent.NewWeatherUpdateHandler(cfg.Server.Host, publisher))
 	subscriptionService := subscription.NewService(
-		subscriptionRepo, cityValidator, publisher)
+		subscriptionRepo, cityValidator, dispatcher)
 
 	// Initialize controllers
 	subscriptionController := rest.NewSubscriptionController(subscriptionService)
@@ -101,9 +115,9 @@ func run() error {
 	// Initialize workers
 	jobManager := scheduled.NewJobManager(ctx)
 	jobManager.RegisterJob(scheduled.NewHourlyWeatherUpdateJob(
-		subscriptionRepo, publisher))
+		subscriptionRepo, dispatcher))
 	jobManager.RegisterJob(scheduled.NewDailyWeatherUpdateJob(
-		subscriptionRepo, publisher))
+		subscriptionRepo, dispatcher))
 	go jobManager.StartScheduler()
 
 	// Initialize router
