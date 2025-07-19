@@ -6,11 +6,14 @@ import (
 	"github.com/rabbitmq/amqp091-go"
 )
 
-const (
-	confirmationQueue  = "confirmation"
-	weatherHourlyQueue = "weather.hourly"
-	weatherDailyQueue  = "weather.daily"
-)
+type QueueConfig struct {
+	Name       string
+	Durable    bool
+	AutoDelete bool
+	Exclusive  bool
+	NoWait     bool
+	Args       amqp091.Table
+}
 
 func NewConnection(url string) (*amqp091.Connection, error) {
 	conn, err := amqp091.Dial(url)
@@ -31,31 +34,13 @@ func NewChannel(conn *amqp091.Connection) (*amqp091.Channel, error) {
 	return ch, nil
 }
 
-func DeclareQueues(ch *amqp091.Channel) error {
-	if err := declareQueue(ch, confirmationQueue); err != nil {
-		return err
+func DeclareQueues(ch *amqp091.Channel, queues []QueueConfig) error {
+	for _, q := range queues {
+		if _, err := ch.QueueDeclare(
+			q.Name, q.Durable, q.AutoDelete, q.Exclusive, q.NoWait, q.Args,
+		); err != nil {
+			return fmt.Errorf("failed to declare queue %s: %w", q.Name, err)
+		}
 	}
-	if err := declareQueue(ch, weatherHourlyQueue); err != nil {
-		return err
-	}
-	if err := declareQueue(ch, weatherDailyQueue); err != nil {
-		return err
-	}
-	return nil
-}
-
-func declareQueue(ch *amqp091.Channel, name string) error {
-	_, err := ch.QueueDeclare(
-		name,
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to declare queue %s: %w", name, err)
-	}
-
 	return nil
 }
