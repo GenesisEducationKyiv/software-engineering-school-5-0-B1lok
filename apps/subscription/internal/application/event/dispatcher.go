@@ -5,6 +5,17 @@ import (
 	"fmt"
 )
 
+type Name string
+
+type Event interface {
+	EventName() Name
+}
+
+type Handler interface {
+	Handle(ctx context.Context, event Event) error
+	CanHandle(name Name) bool
+}
+
 type Dispatcher struct {
 	handlers []Handler
 }
