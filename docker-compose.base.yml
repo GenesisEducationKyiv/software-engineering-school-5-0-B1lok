@@ -47,16 +47,6 @@ services:
         condition: service_healthy
     networks:
       - app-network
-  email-service:
-    build:
-      context: .
-      dockerfile: apps/email/Dockerfile
-      target: final
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      - app-network
   notification-service:
     build:
       context: .
@@ -73,11 +63,11 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=weather
     ports:
       - "5432:5432"
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: [ "CMD", "pg_isready" ]
       interval: 10s
