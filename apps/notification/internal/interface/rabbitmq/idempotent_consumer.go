@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/rabbitmq/amqp091-go"
 	"log"
+
+	"github.com/rabbitmq/amqp091-go"
+
 	"notification/internal/application/event"
 	"notification/pkg"
 )
@@ -20,7 +22,11 @@ type IdempotentConsumer struct {
 	saver     Saver
 }
 
-func NewIdempotentConsumer(channel *amqp091.Channel, txManager pkg.TxManager, saver Saver) *IdempotentConsumer {
+func NewIdempotentConsumer(
+	channel *amqp091.Channel,
+	txManager pkg.TxManager,
+	saver Saver,
+) *IdempotentConsumer {
 	return &IdempotentConsumer{
 		channel:   channel,
 		txManager: txManager,

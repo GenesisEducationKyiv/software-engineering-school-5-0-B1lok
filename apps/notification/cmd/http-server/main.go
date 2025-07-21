@@ -3,9 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"log"
+
 	"notification/internal/application/event"
 	"notification/internal/infrastructure/email"
 	infevent "notification/internal/infrastructure/event"
@@ -13,9 +18,6 @@ import (
 	"notification/internal/interface/rabbitmq"
 	"notification/internal/postgres"
 	"notification/pkg"
-	"os"
-	"os/signal"
-	"syscall"
 
 	_ "github.com/B1lok/proto-contracts"
 	"github.com/gin-gonic/gin"

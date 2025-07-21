@@ -11,7 +11,7 @@ GO_TEST = go test -v
 
 PLAYWRIGHT_VERSION=v0.5200.0
 
-MODULES = apps/subscription apps/weather apps/notification apps/gateway apps/email
+MODULES = apps/subscription apps/weather apps/notification apps/gateway
 
 .PHONY: unit
 unit:

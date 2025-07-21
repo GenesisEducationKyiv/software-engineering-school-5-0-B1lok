@@ -24,5 +24,4 @@ func (c *Client) HourlyUpdate(
 	city string,
 ) (*WeatherHourly, error) {
 	return c.client.GetHourlyWeather(ctx, &CityRequest{City: city})
-
 }

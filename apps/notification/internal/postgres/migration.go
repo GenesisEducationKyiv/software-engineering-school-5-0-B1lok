@@ -2,9 +2,11 @@ package postgres
 
 import (
 	"fmt"
-	"github.com/golang-migrate/migrate/v4"
 	"log"
 	"net/url"
+
+	"github.com/golang-migrate/migrate/v4"
+
 	"notification/internal/config"
 )
 

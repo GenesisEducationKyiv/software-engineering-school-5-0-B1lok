@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/rabbitmq/amqp091-go"
 	"log"
+
+	"github.com/rabbitmq/amqp091-go"
 )
 
 func consumeLoop(

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+
 	"notification/internal/application/event"
 
 	"github.com/rabbitmq/amqp091-go"
