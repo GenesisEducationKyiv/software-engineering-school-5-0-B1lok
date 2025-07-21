@@ -17,6 +17,9 @@ RUN --mount=type=cache,target=/go/pkg/mod/ \
 
 FROM alpine:latest AS final
 
+COPY apps/notification/templates /templates
+COPY apps/notification/migrations /migrations
+
 RUN --mount=type=cache,target=/var/cache/apk \
     apk --update add \
         ca-certificates \

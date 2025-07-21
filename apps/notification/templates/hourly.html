@@ -153,37 +153,37 @@
               <tr>
                 <td style="padding: 20px;">
                   <!-- Location and Time -->
-                  <p class="location" style="font-size: 24px; font-weight: bold; margin-bottom: 5px; color: #333;">{{.WeatherHourly.Location}}</p>
-                  <p class="time" style="font-size: 16px; color: #666; margin-bottom: 20px;">{{.WeatherHourly.Time}}</p>
+                  <p class="location" style="font-size: 24px; font-weight: bold; margin-bottom: 5px; color: #333;">{{.Weather.Location}}</p>
+                  <p class="time" style="font-size: 16px; color: #666; margin-bottom: 20px;">{{.Weather.Time}}</p>
 
                   <!-- Temperature -->
-                  <p class="temperature" style="font-size: 36px; font-weight: bold; margin-bottom: 15px; color: #e67e22;">{{.WeatherHourly.TempC}}°C</p>
+                  <p class="temperature" style="font-size: 36px; font-weight: bold; margin-bottom: 15px; color: #e67e22;">{{.Weather.TempC}}°C</p>
 
                   <!-- Weather Condition -->
                   <div class="condition" style="margin-bottom: 15px;">
-                    <img src="{{.WeatherHourly.Icon}}" alt="Weather icon" width="50" height="50" style="vertical-align: middle;">
-                    <span class="condition-text" style="font-size: 18px; margin-left: 10px; color: #555; display: inline-block; vertical-align: middle;">{{.WeatherHourly.Condition}}</span>
+                    <img src="{{.Weather.Icon}}" alt="Weather icon" width="50" height="50" style="vertical-align: middle;">
+                    <span class="condition-text" style="font-size: 18px; margin-left: 10px; color: #555; display: inline-block; vertical-align: middle;">{{.Weather.Condition}}</span>
                   </div>
 
                   <!-- Rain Forecast -->
-                  {{if .WeatherHourly.WillItRain}}
+                  {{if .Weather.WillItRain}}
                   <div class="forecast-item" style="margin-bottom: 10px; padding: 10px; background-color: #e3f2fd; border-radius: 6px; font-size: 16px;">
-                    <strong>Rain Expected</strong> - {{.WeatherHourly.ChanceRain}}% chance of rain
+                    <strong>Rain Expected</strong> - {{.Weather.ChanceRain}}% chance of rain
                   </div>
                   {{else}}
                   <div class="forecast-item" style="margin-bottom: 10px; padding: 10px; background-color: #f5f7fa; border-radius: 6px; font-size: 16px;">
-                    <strong>No Rain Expected</strong> - {{.WeatherHourly.ChanceRain}}% chance of rain
+                    <strong>No Rain Expected</strong> - {{.Weather.ChanceRain}}% chance of rain
                   </div>
                   {{end}}
 
                   <!-- Snow Forecast -->
-                  {{if .WeatherHourly.WillItSnow}}
+                  {{if .Weather.WillItSnow}}
                   <div class="forecast-item" style="margin-bottom: 10px; padding: 10px; background-color: #e8f4f8; border-radius: 6px; font-size: 16px;">
-                    <strong>Snow Expected</strong> - {{.WeatherHourly.ChanceSnow}}% chance of snow
+                    <strong>Snow Expected</strong> - {{.Weather.ChanceSnow}}% chance of snow
                   </div>
                   {{else}}
                   <div class="forecast-item" style="margin-bottom: 10px; padding: 10px; background-color: #f5f7fa; border-radius: 6px; font-size: 16px;">
-                    <strong>No Snow Expected</strong> - {{.WeatherHourly.ChanceSnow}}% chance of snow
+                    <strong>No Snow Expected</strong> - {{.Weather.ChanceSnow}}% chance of snow
                   </div>
                   {{end}}
                 </td>

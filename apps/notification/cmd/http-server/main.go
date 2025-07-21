@@ -3,7 +3,16 @@ package main
 import (
 	"context"
 	"fmt"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"log"
+	"notification/internal/application/event"
+	"notification/internal/infrastructure/email"
+	infevent "notification/internal/infrastructure/event"
+	grpcweather "notification/internal/infrastructure/grpc/weather"
+	"notification/internal/interface/rabbitmq"
+	"notification/internal/postgres"
+	"notification/pkg"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,10 +23,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"notification/internal/config"
-	"notification/internal/grpc/weather"
-	"notification/internal/rabbitmq"
-	"notification/internal/rabbitmq/consumer"
-	"notification/internal/rabbitmq/publisher"
 )
 
 func main() {
@@ -34,6 +39,14 @@ func run() error {
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	postgres.RunMigrations(cfg.DB)
+
+	db, err := postgres.ConnectDB(ctx, cfg.DB)
+	if err != nil {
+		cancel()
+		return fmt.Errorf("failed to connect to database: %w", err)
+	}
+	defer db.Close()
 
 	rabbitConn, err := rabbitmq.NewConnection(cfg.RabbitMqURL)
 	if err != nil {
@@ -57,7 +70,7 @@ func run() error {
 		}
 	}()
 
-	if err := rabbitmq.DeclareQueues(rabbitmqChannel); err != nil {
+	if err := rabbitmq.DeclareQueues(rabbitmqChannel, rabbitmq.GetAppQueueConfigs()); err != nil {
 		cancel()
 		return fmt.Errorf("failed to declare RabbitMQ queues: %w", err)
 	}
@@ -78,22 +91,26 @@ func run() error {
 			}
 		}
 	}()
-	grpcWeatherClient := weather.NewWeatherServiceClient(weatherConn)
-	appWeatherClient := weather.NewClient(grpcWeatherClient)
+	grpcWeatherClient := grpcweather.NewWeatherServiceClient(weatherConn)
+	appWeatherClient := grpcweather.NewClient(grpcWeatherClient)
+	repository := postgres.NewRepository(db.Pool)
+	txManager := pkg.NewTxManager(db.Pool)
 
-	emailPublisher := publisher.NewPublisher(rabbitmqChannel, appWeatherClient)
-	worker := consumer.NewWorker(rabbitmqChannel, emailPublisher)
-	if err := worker.StartConfirmationConsumer(ctx); err != nil {
+	consumer := rabbitmq.NewConsumer(rabbitmqChannel)
+	idempotentConsumer := rabbitmq.NewIdempotentConsumer(rabbitmqChannel, txManager, repository)
+	sender := email.NewEmailSender(cfg.Email)
+
+	dispatcher := event.NewDispatcher(consumer)
+	idempotentDispatcher := event.NewDispatcher(idempotentConsumer)
+	userSubscribedHandler := infevent.NewUserSubscribedHandler(sender)
+	weatherUpdateHandler := infevent.NewWeatherUpdateHandler(appWeatherClient, sender)
+	if err := idempotentDispatcher.Register(ctx, userSubscribedHandler); err != nil {
 		cancel()
-		return fmt.Errorf("failed to start confirmation worker: %w", err)
+		return fmt.Errorf("failed to register user subscribed handler: %w", err)
 	}
-	if err := worker.StartHourlyUpdateConsumer(ctx); err != nil {
+	if err := dispatcher.Register(ctx, weatherUpdateHandler); err != nil {
 		cancel()
-		return fmt.Errorf("failed to start hourly update worker: %w", err)
-	}
-	if err := worker.StartDailyUpdateConsumer(ctx); err != nil {
-		cancel()
-		return fmt.Errorf("failed to start daily update worker: %w", err)
+		return fmt.Errorf("failed to register weather updated handler: %w", err)
 	}
 
 	router := gin.Default()

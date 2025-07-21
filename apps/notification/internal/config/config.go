@@ -16,9 +16,27 @@ const (
 )
 
 type Config struct {
-	ServerPort         string `config:"server_port"`
-	RabbitMqURL        string `config:"rabbitmq_url"`
-	WeatherServiceAddr string `config:"weather_service"`
+	DB                 DBConfig    `config:"db"`
+	Email              EmailConfig `config:"email"`
+	ServerPort         string      `config:"server_port"`
+	RabbitMqURL        string      `config:"rabbitmq_url"`
+	WeatherServiceAddr string      `config:"weather_service"`
+}
+
+type EmailConfig struct {
+	Host     string `config:"host"`
+	Port     int    `config:"port"`
+	Username string `config:"username"`
+	Password string `config:"password"`
+	From     string `config:"from"`
+}
+
+type DBConfig struct {
+	Host     string `config:"host"`
+	Port     string `config:"port"`
+	User     string `config:"user"`
+	Password string `config:"password"`
+	Name     string `config:"name"`
 }
 
 func LoadConfig() (Config, error) {

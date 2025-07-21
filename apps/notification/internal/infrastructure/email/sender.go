@@ -3,11 +3,10 @@ package email
 import (
 	"bytes"
 	"fmt"
+	"gopkg.in/gomail.v2"
 	"html/template"
 
-	"gopkg.in/gomail.v2"
-
-	"email/internal/config"
+	"notification/internal/config"
 )
 
 const (
