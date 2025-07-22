@@ -1,6 +1,7 @@
 package grpc
 
 import (
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -14,6 +15,18 @@ func MapGrpcErrorToDomain(err error) error {
 		return pkgErrors.New(
 			internalErrors.ErrInvalidInput, err.Error(),
 		)
+	}
+
+	if st.Code() == codes.InvalidArgument {
+		for _, detail := range st.Details() {
+			if info, ok := detail.(*errdetails.BadRequest); ok {
+				for _, violation := range info.FieldViolations {
+					if violation.Field == "city" {
+						return pkgErrors.New(internalErrors.ErrInvalidInput, violation.Description)
+					}
+				}
+			}
+		}
 	}
 
 	errorMapping := map[codes.Code]error{
