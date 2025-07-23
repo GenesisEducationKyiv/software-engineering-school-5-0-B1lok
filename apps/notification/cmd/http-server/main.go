@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"notification/internal/infrastructure/postgres"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"notification/internal/infrastructure/postgres"
 
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
