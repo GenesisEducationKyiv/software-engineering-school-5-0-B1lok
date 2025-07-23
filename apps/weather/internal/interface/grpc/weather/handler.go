@@ -29,10 +29,11 @@ func (h *Handler) GetCurrentWeather(
 	ctx context.Context,
 	request *CityRequest,
 ) (*Weather, error) {
-	city := request.GetCity()
-	if city == "" {
-		return nil, pkgErrors.New(internalErrors.ErrInvalidInput, "Invalid request")
+	err := request.ValidateAll()
+	if err != nil {
+		return nil, pkgErrors.New(internalErrors.ErrInvalidInput, err.Error())
 	}
+	city := request.GetCity()
 
 	weather, err := h.service.GetWeather(ctx, city)
 	if err != nil {
@@ -46,10 +47,11 @@ func (h *Handler) GetHourlyWeather(
 	ctx context.Context,
 	request *CityRequest,
 ) (*WeatherHourly, error) {
-	city := request.GetCity()
-	if city == "" {
-		return nil, pkgErrors.New(internalErrors.ErrInvalidInput, "Invalid request")
+	err := request.ValidateAll()
+	if err != nil {
+		return nil, pkgErrors.New(internalErrors.ErrInvalidInput, err.Error())
 	}
+	city := request.GetCity()
 
 	weather, err := h.service.GetHourlyForecast(ctx, city)
 	if err != nil {
@@ -63,10 +65,11 @@ func (h *Handler) GetDailyWeather(
 	ctx context.Context,
 	request *CityRequest,
 ) (*WeatherDaily, error) {
-	city := request.GetCity()
-	if city == "" {
-		return nil, pkgErrors.New(internalErrors.ErrInvalidInput, "Invalid request")
+	err := request.ValidateAll()
+	if err != nil {
+		return nil, pkgErrors.New(internalErrors.ErrInvalidInput, err.Error())
 	}
+	city := request.GetCity()
 
 	weather, err := h.service.GetDailyForecast(ctx, city)
 	if err != nil {

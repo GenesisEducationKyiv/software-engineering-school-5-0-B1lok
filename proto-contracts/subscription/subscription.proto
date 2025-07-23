@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package subscription;
 
+import "validate/validate.proto";
+
 option go_package = "github.com/B1lok/proto-contracts/proto/subscription;subscription";
 
 service SubscriptionService {
@@ -11,13 +13,13 @@ service SubscriptionService {
 }
 
 message SubscribeRequest {
-  string email = 1;
-  string city = 2;
-  string frequency = 3;
+  string email = 1 [(validate.rules).string = {email: true}];
+  string city = 2 [(validate.rules).string = {min_len: 1, max_len: 100}];
+  string frequency = 3 [(validate.rules).string = {in: ["daily", "hourly"]}];
 }
 
 message TokenRequest {
-  string token = 1;
+  string token = 1  [(validate.rules).string = {min_len: 10, max_len: 256}];
 }
 
 message ResponseMessage {

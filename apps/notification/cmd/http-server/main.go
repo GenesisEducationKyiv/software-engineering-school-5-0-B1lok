@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"notification/internal/infrastructure/postgres"
 	"os"
 	"os/signal"
 	"syscall"
@@ -16,7 +17,6 @@ import (
 	infevent "notification/internal/infrastructure/event"
 	grpcweather "notification/internal/infrastructure/grpc/weather"
 	"notification/internal/interface/rabbitmq"
-	"notification/internal/postgres"
 	"notification/pkg"
 
 	_ "github.com/B1lok/proto-contracts"

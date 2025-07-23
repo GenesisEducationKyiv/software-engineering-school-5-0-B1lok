@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package validator;
 
+import "validate/validate.proto";
+
 option go_package = "github.com/B1lok/proto-contracts/proto/validator;validator";
 
 service CityValidationService {
@@ -9,7 +11,7 @@ service CityValidationService {
 }
 
 message CityRequest {
-  string city = 1;
+  string city = 1 [(validate.rules).string = {min_len: 1, max_len: 100}];
 }
 
 message CityResponse {

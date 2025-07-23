@@ -4,6 +4,7 @@ go 1.24.3
 
 require (
 	github.com/B1lok/proto-contracts v0.0.0
+	github.com/envoyproxy/protoc-gen-validate v1.2.1
 	github.com/gin-gonic/gin v1.10.1
 	github.com/go-viper/mapstructure/v2 v2.3.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1

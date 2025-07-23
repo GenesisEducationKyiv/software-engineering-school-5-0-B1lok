@@ -21,10 +21,9 @@ func NewHandler(validator CityValidator) *Handler {
 }
 
 func (h *Handler) Validate(ctx context.Context, request *CityRequest) (*CityResponse, error) {
-	if request.GetCity() == "" {
-		return nil, pkgErrors.New(
-			internalErrors.ErrInvalidInput, "Invalid request: city is required",
-		)
+	err := request.ValidateAll()
+	if err != nil {
+		return nil, pkgErrors.New(internalErrors.ErrInvalidInput, err.Error())
 	}
 
 	validatedCity, err := h.validator.Validate(ctx, request.GetCity())

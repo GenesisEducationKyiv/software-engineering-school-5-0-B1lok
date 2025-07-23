@@ -89,15 +89,10 @@ lint:
     done; \
     exit $$exit_code
 
-PROTO_MODULE_PATH = $$(go list -f '{{ .Dir }}' -m github.com/B1lok/proto-contracts)/proto
 
-define GEN_PROTO
-	@echo "Generating protos for module $(1)..."
-	cd $(1) && \
-	protoc --proto_path=$(PROTO_MODULE_PATH) \
-		--go_out=paths=source_relative:$(2) \
-		--go-grpc_out=paths=source_relative:$(2) \
-		$(3)
+define GEN_PROTO_BUF
+	@echo "Generating protos for module $(1) using template $(2)..."
+    cd $(1) && buf generate --template $(2)
 endef
 
 .PHONY: proto-gen-all
@@ -105,19 +100,19 @@ proto-gen-all: proto-gen-subscription proto-gen-weather proto-gen-notification p
 
 .PHONY: proto-gen-subscription
 proto-gen-subscription:
-	$(call GEN_PROTO,apps/subscription,internal/interface/grpc/subscription,subscription.proto)
-	$(call GEN_PROTO,apps/subscription,internal/infrastructure/grpc/validator,validator.proto)
+	$(call GEN_PROTO_BUF,apps/subscription,buf.gen.subscription.yaml)
+	$(call GEN_PROTO_BUF,apps/subscription,buf.gen.validator.yaml)
 
 .PHONY: proto-gen-weather
 proto-gen-weather:
-	$(call GEN_PROTO,apps/weather,internal/interface/grpc/weather,weather.proto)
-	$(call GEN_PROTO,apps/weather,internal/interface/grpc/validator,validator.proto)
+	$(call GEN_PROTO_BUF,apps/weather,buf.gen.weather.yaml)
+	$(call GEN_PROTO_BUF,apps/weather,buf.gen.validator.yaml)
 
 .PHONY: proto-gen-notification
 proto-gen-notification:
-	$(call GEN_PROTO,apps/notification,internal/grpc/weather,weather.proto)
+	$(call GEN_PROTO_BUF,apps/notification,buf.gen.weather.yaml)
 
 .PHONY: proto-gen-gateway
 proto-gen-gateway:
-	$(call GEN_PROTO,apps/gateway,internal/controllers/subscription,subscription.proto)
-	$(call GEN_PROTO,apps/gateway,internal/controllers/weather,weather.proto)
+	$(call GEN_PROTO_BUF,apps/gateway,buf.gen.subscription.yaml)
+	$(call GEN_PROTO_BUF,apps/gateway,buf.gen.weather.yaml)

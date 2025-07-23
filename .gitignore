@@ -11,5 +11,6 @@ rabbitmq-data
 # gRPC / Protobuf generated files
 *.pb.go
 *_grpc.pb.go
+*.pb.validate.go
 
 *.exe

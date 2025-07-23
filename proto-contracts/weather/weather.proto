@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package weather;
 
+import "validate/validate.proto";
+
 option go_package = "github.com/B1lok/proto-contracts/proto/weather;weather";
 
 service WeatherService {
@@ -44,5 +46,5 @@ message WeatherHourly {
 
 
 message CityRequest {
-  string city = 1;
+  string city = 1 [(validate.rules).string = {min_len: 1, max_len: 100}];
 }

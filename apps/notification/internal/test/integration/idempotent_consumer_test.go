@@ -16,10 +16,10 @@ import (
 	"notification/internal/application/event"
 	"notification/internal/config"
 	infevent "notification/internal/infrastructure/event"
+	appPostgres "notification/internal/infrastructure/postgres"
 	"notification/internal/interface/rabbitmq"
 	"notification/pkg"
 
-	appPostgres "notification/internal/postgres"
 	"notification/internal/test/containers"
 	"notification/internal/test/stub"
 	"os"
