@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/rs/zerolog/log"
 
 	_ "github.com/B1lok/proto-contracts"
 	"github.com/gin-gonic/gin"
@@ -21,7 +22,7 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		log.Fatalf("Application failed to start: %v", err)
+		log.Fatal().Err(err).Msg("Application failed to start")
 	}
 }
 
@@ -45,7 +46,7 @@ func run() error {
 	defer func() {
 		if subscriptionConn != nil {
 			if closeErr := subscriptionConn.Close(); closeErr != nil {
-				log.Printf("Failed to close connection: %v", closeErr)
+				log.Error().Err(closeErr).Msg("Failed to close gRPC connection")
 			}
 		}
 	}()
@@ -63,7 +64,7 @@ func run() error {
 	defer func() {
 		if weatherConn != nil {
 			if closeErr := weatherConn.Close(); closeErr != nil {
-				log.Printf("Failed to close connection: %v", closeErr)
+				log.Error().Err(closeErr).Msg("Failed to close gRPC connection")
 			}
 		}
 	}()
@@ -101,7 +102,7 @@ func run() error {
 	}()
 
 	serverAddr := fmt.Sprintf(":%s", cfg.ServerPort)
-	log.Printf("Server starting on %s", serverAddr)
+	log.Info().Str("address", serverAddr).Msg("Starting HTTP server")
 	if err := router.Run(serverAddr); err != nil {
 		return fmt.Errorf("failed to start server: %w", err)
 	}

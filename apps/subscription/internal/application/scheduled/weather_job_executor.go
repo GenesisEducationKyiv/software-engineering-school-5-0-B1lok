@@ -3,8 +3,9 @@ package scheduled
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"subscription-service/internal/application/event"
 	"subscription-service/internal/application/event/subscription"
@@ -42,7 +43,7 @@ func NewWeatherJobExecutor(
 }
 
 func (e *WeatherJobExecutor) Execute(ctx context.Context) error {
-	log.Printf("Weather job started for frequency: %s", e.frequency)
+	log.Info().Str("frequency", string(e.frequency)).Msg("Weather job started")
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
@@ -57,7 +58,7 @@ func (e *WeatherJobExecutor) Execute(ctx context.Context) error {
 		for _, sub := range group.Subscriptions {
 			select {
 			case <-ctx.Done():
-				log.Printf("context cancelled: %v", ctx.Err())
+				log.Info().Err(ctx.Err()).Msg("context cancelled")
 				return ctx.Err()
 			default:
 				err := e.dispatcher.Dispatch(ctx, &subscription.WeatherUpdatedEvent{
@@ -67,7 +68,7 @@ func (e *WeatherJobExecutor) Execute(ctx context.Context) error {
 					Token:     sub.Token,
 				})
 				if err != nil {
-					log.Printf("failed to dispatch weather update: %v", err)
+					log.Error().Err(err).Msg("failed to dispatch weather update")
 					hasErrorHappened = true
 				}
 			}
@@ -78,6 +79,6 @@ func (e *WeatherJobExecutor) Execute(ctx context.Context) error {
 		return fmt.Errorf("some notifications failed for frequency: %s", e.frequency)
 	}
 
-	log.Printf("Weather job completed successfully for frequency: %s", e.frequency)
+	log.Info().Str("frequency", string(e.frequency)).Msg("Weather job completed successfully")
 	return nil
 }

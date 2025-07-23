@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/rs/zerolog/log"
 
 	"subscription-service/internal/application/event"
 	"subscription-service/internal/infrastructure/db/postgres/outbox"
@@ -33,7 +34,7 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		log.Fatalf("Application failed to start: %v", err)
+		log.Fatal().Err(err).Msg("application failed to start")
 	}
 }
 
@@ -62,7 +63,7 @@ func run() error {
 	}
 	defer func() {
 		if closeErr := conn.Close(); closeErr != nil {
-			log.Printf("Failed to close connection: %v", closeErr)
+			log.Error().Err(closeErr).Msg("failed to close validation client connection")
 		}
 	}()
 	cityValidator := validator.NewCityValidator(validationClient)
@@ -74,7 +75,7 @@ func run() error {
 	}
 	defer func() {
 		if err := rabbitConn.Close(); err != nil {
-			log.Printf("Failed to close RabbitMQ connection: %v", err)
+			log.Error().Err(err).Msg("failed to close RabbitMQ connection")
 		}
 	}()
 
@@ -85,7 +86,7 @@ func run() error {
 	}
 	defer func() {
 		if err := rabbitmqChannel.Close(); err != nil {
-			log.Printf("Failed to close RabbitMQ channel: %v", err)
+			log.Error().Err(err).Msg("failed to close RabbitMQ channel")
 		}
 	}()
 
@@ -139,11 +140,11 @@ func run() error {
 
 	go func() {
 		<-ctx.Done()
-		log.Println("Shutting down gRPC server...")
+		log.Info().Msg("Shutting down gRPC server...")
 		s.GracefulStop()
 	}()
 
-	log.Printf("server listening at %v", lis.Addr())
+	log.Info().Msgf("gRPC server listening on :%s", cfg.Server.GrpcPort)
 	if err := s.Serve(lis); err != nil {
 		return fmt.Errorf("failed to serve: %v", err)
 	}

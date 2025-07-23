@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/rs/zerolog/log"
 
 	"notification/internal/infrastructure/postgres"
 
@@ -30,7 +31,7 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		log.Fatalf("Application failed to start: %v", err)
+		log.Fatal().Err(err).Msg("Application failed to start")
 	}
 }
 
@@ -58,7 +59,7 @@ func run() error {
 	}
 	defer func() {
 		if err := rabbitConn.Close(); err != nil {
-			log.Printf("Failed to close RabbitMQ connection: %v", err)
+			log.Error().Err(err).Msg("failed to close RabbitMQ connection")
 		}
 	}()
 
@@ -69,7 +70,7 @@ func run() error {
 	}
 	defer func() {
 		if err := rabbitmqChannel.Close(); err != nil {
-			log.Printf("Failed to close RabbitMQ channel: %v", err)
+			log.Error().Err(err).Msg("failed to close RabbitMQ channel")
 		}
 	}()
 
@@ -90,7 +91,7 @@ func run() error {
 	defer func() {
 		if weatherConn != nil {
 			if closeErr := weatherConn.Close(); closeErr != nil {
-				log.Printf("Failed to close connection: %v", closeErr)
+				log.Error().Err(closeErr).Msg("failed to close gRPC connection")
 			}
 		}
 	}()
@@ -124,7 +125,7 @@ func run() error {
 	}()
 
 	serverAddr := fmt.Sprintf(":%s", cfg.ServerPort)
-	log.Printf("Server starting on %s", serverAddr)
+	log.Info().Msgf("Starting server on %s", serverAddr)
 	if err := router.Run(serverAddr); err != nil {
 		return fmt.Errorf("failed to start server: %w", err)
 	}

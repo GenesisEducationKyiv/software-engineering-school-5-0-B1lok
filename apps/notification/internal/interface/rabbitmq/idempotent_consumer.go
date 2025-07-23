@@ -4,7 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/rabbitmq/amqp091-go"
 
@@ -60,7 +61,7 @@ func (c *IdempotentConsumer) Consume(ctx context.Context, handler event.Handler)
 			return c.txManager.ExecuteTx(ctx, func(txCtx context.Context) error {
 				messageId, err := getMessageID(msg)
 				if err != nil {
-					log.Printf("invalid message_id: %v", err)
+					log.Error().Err(err).Msg("failed to get message_id from headers")
 					return nack(msg)
 				}
 
@@ -69,7 +70,7 @@ func (c *IdempotentConsumer) Consume(ctx context.Context, handler event.Handler)
 				}
 
 				if err := handler.Handle(ctx, msg.Body); err != nil {
-					log.Printf("failed to handle message: %v", err)
+					log.Error().Err(err).Msg("failed to handle message")
 					return nack(msg)
 				}
 

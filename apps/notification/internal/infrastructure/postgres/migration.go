@@ -2,8 +2,9 @@ package postgres
 
 import (
 	"fmt"
-	"log"
 	"net/url"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/golang-migrate/migrate/v4"
 
@@ -17,12 +18,12 @@ func RunMigrations(cfg config.DBConfig) {
 
 	m, err := migrate.New("file://migrations", connectionString)
 	if err != nil {
-		log.Printf("Migration initialization failed: %v", err)
+		log.Error().Err(err).Msg("Migration initialization failed")
 		return
 	}
 
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		log.Printf("Migration failed: %v", err)
+		log.Error().Err(err).Msg("Migration failed")
 	}
 }
 
@@ -32,11 +33,11 @@ func RunMigrationsWithPath(cfg config.DBConfig, migrationPath string) {
 
 	m, err := migrate.New(migrationPath, connectionString)
 	if err != nil {
-		log.Printf("Migration initialization failed: %v", err)
+		log.Error().Err(err).Msg("Migration initialization failed")
 		return
 	}
 
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		log.Printf("Migration failed: %v", err)
+		log.Error().Err(err).Msg("Migration failed")
 	}
 }

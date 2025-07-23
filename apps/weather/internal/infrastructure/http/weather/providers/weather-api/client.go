@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"weather-service/internal/domain"
 	internalErrors "weather-service/internal/errors"
@@ -64,7 +65,7 @@ func (c *Client) GetWeather(ctx context.Context, city string) (*domain.Weather, 
 	c.logger.LogResponse(providerName, resp)
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			log.Println("Error closing response body:", err)
+			log.Error().Err(err).Msg("failed to close response body")
 		}
 	}()
 
@@ -94,7 +95,7 @@ func (c *Client) GetDailyForecast(ctx context.Context, city string) (*domain.Wea
 	c.logger.LogResponse(providerName, resp)
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			log.Println("Error closing response body:", err)
+			log.Error().Err(err).Msg("failed to close response body")
 		}
 	}()
 
@@ -128,7 +129,7 @@ func (c *Client) GetHourlyForecast(
 	c.logger.LogResponse(providerName, resp)
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			log.Println("Error closing response body:", err)
+			log.Error().Err(err).Msg("failed to close response body")
 		}
 	}()
 

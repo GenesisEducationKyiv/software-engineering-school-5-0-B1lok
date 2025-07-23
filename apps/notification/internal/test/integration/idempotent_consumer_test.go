@@ -11,8 +11,8 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/suite"
-	"log"
 	"notification/internal/application/event"
 	"notification/internal/config"
 	infevent "notification/internal/infrastructure/event"
@@ -196,7 +196,7 @@ func TestIdempotentConsumerTestSuite(t *testing.T) {
 func getMigrationPath() string {
 	workingDir, err := os.Getwd()
 	if err != nil {
-		log.Fatalf("Failed to get working directory: %v", err)
+		log.Fatal().Err(err).Msg("failed to get working directory")
 	}
 	projectRoot := filepath.Join(workingDir, "../../..")
 	migrationsPath := filepath.Join(projectRoot, "migrations")

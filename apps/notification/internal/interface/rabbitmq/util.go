@@ -4,7 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/rabbitmq/amqp091-go"
 )
@@ -18,16 +19,16 @@ func consumeLoop(
 	for {
 		select {
 		case <-ctx.Done():
-			log.Printf("Stopping consumer for queue %s", queueName)
+			log.Info().Str("queue", queueName).Msg("Stopping consumer")
 			return
 		case msg, ok := <-msgs:
 			if !ok {
-				log.Printf("Channel closed, stopping consumer for queue %s", queueName)
+				log.Info().Str("queue", queueName).Msg("Channel closed, stopping consumer")
 				return
 			}
 
 			if err := handler(ctx, msg); err != nil {
-				log.Printf("failed to process message from queue %s: %v", queueName, err)
+				log.Error().Str("queue", queueName).Err(err).Msg("failed to process message")
 			}
 		}
 	}
@@ -42,7 +43,7 @@ func ack(msg amqp091.Delivery) error {
 
 func nack(msg amqp091.Delivery) error {
 	if err := msg.Nack(false, false); err != nil {
-		log.Printf("failed to nack message: %v", err)
+		log.Error().Err(err).Msg("failed to nack message")
 	}
 	return errors.New("nack issued")
 }

@@ -2,7 +2,8 @@ package scheduled
 
 import (
 	"context"
-	"log"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/robfig/cron/v3"
 )
@@ -30,12 +31,20 @@ func (jm *JobManager) StartScheduler() {
 		schedule := job.Schedule()
 		if _, err := jm.cron.AddFunc(schedule, func() {
 			if err := job.Run(jm.context); err != nil {
-				log.Printf("Error in job %s: %v", job.Name(), err)
+				log.Error().
+					Str("job", job.Name()).
+					Err(err).
+					Msg("Error in job")
 			} else {
-				log.Printf("Job %s executed successfully", job.Name())
+				log.Info().
+					Str("job", job.Name()).
+					Msg("Job executed successfully")
 			}
 		}); err != nil {
-			log.Printf("Failed to schedule job %s: %v", job.Name(), err)
+			log.Error().
+				Str("job", job.Name()).
+				Err(err).
+				Msg("Failed to schedule job")
 		}
 	}
 	jm.cron.Start()

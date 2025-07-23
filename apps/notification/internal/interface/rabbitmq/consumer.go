@@ -3,7 +3,8 @@ package rabbitmq
 import (
 	"context"
 	"fmt"
-	"log"
+
+	"github.com/rs/zerolog/log"
 
 	"notification/internal/application/event"
 
@@ -44,7 +45,7 @@ func (c *Consumer) Consume(ctx context.Context, handler event.Handler) error {
 		func(ctx context.Context, msg amqp091.Delivery,
 		) error {
 			if err := handler.Handle(ctx, msg.Body); err != nil {
-				log.Printf("failed to handle message: %v", err)
+				log.Error().Err(err).Msg("failed to handle message")
 				return nack(msg)
 			}
 			return ack(msg)

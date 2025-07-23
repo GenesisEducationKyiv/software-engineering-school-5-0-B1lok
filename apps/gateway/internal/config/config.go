@@ -2,11 +2,11 @@ package config
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/iamolegga/enviper"
 	"github.com/joho/godotenv"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
 
@@ -23,7 +23,7 @@ type Config struct {
 
 func LoadConfig() (Config, error) {
 	if err := loadEnvFile(defaultEnvFile); err != nil {
-		log.Printf("warning: %v", err)
+		log.Warn().Err(err).Msg("warning: failed to load .env file")
 	}
 
 	var config Config

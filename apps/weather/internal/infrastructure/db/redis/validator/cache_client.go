@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	appRedis "weather-service/internal/infrastructure/db/redis"
 
@@ -66,7 +67,7 @@ func (c *ProxyClient) Validate(ctx context.Context, city string) (*string, error
 
 	if cityValidated != nil {
 		if err := appRedis.Set(ctx, c.redis, key, cityValidated, c.ttl); err != nil {
-			log.Printf("validator: failed to cache cityValidated for key %s: %v\n", key, err)
+			log.Error().Err(err).Str("key", key).Msg("validator: failed to cache cityValidated")
 		}
 	}
 

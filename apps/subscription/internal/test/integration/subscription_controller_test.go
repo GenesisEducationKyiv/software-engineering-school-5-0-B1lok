@@ -7,7 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"github.com/rs/zerolog/log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -272,7 +272,7 @@ func TestSubscriptionControllerTestSuite(t *testing.T) {
 func getMigrationPath() string {
 	workingDir, err := os.Getwd()
 	if err != nil {
-		log.Fatalf("Failed to get working directory: %v", err)
+		log.Fatal().Err(err).Msg("could not get working directory")
 	}
 	projectRoot := filepath.Join(workingDir, "../../..")
 	migrationsPath := filepath.Join(projectRoot, "migrations")

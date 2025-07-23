@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	_ "github.com/B1lok/proto-contracts"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -37,7 +38,7 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		log.Fatalf("Application failed to start: %v", err)
+		log.Fatal().Err(err).Msg("application failed to start")
 	}
 }
 
@@ -155,14 +156,14 @@ func run() error {
 	}
 
 	go func() {
-		log.Printf("gRPC server listening on %v", lis.Addr())
+		log.Info().Msgf("gRPC server listening on :%s", cfg.Server.GrpcPort)
 		if err := s.Serve(lis); err != nil {
 			grpcErrChan <- err
 		}
 	}()
 
 	go func() {
-		log.Printf("Metrics HTTP server listening on :%s\n", cfg.MetricsPort)
+		log.Info().Msgf("Metrics HTTP server listening on :%s", cfg.MetricsPort)
 		if err := metricsServer.ListenAndServe(); err != nil {
 			httpErrChan <- err
 		}
@@ -170,22 +171,22 @@ func run() error {
 
 	go func() {
 		<-ctx.Done()
-		log.Println("Shutting down gRPC server...")
+		log.Info().Msg("Shutting down gRPC server...")
 		s.GracefulStop()
 	}()
 
 	select {
 	case <-ctx.Done():
-		log.Println("Shutdown initiated...")
+		log.Info().Msg("Shutdown initiated...")
 
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		if err := metricsServer.Shutdown(shutdownCtx); err != nil {
-			log.Printf("Metrics HTTP shutdown error: %v", err)
+			log.Error().Err(err).Msg("Metrics HTTP shutdown error")
 		}
 		s.GracefulStop()
-		log.Println("Gracefully stopped")
+		log.Info().Msg("Gracefully stopped")
 		return nil
 
 	case err := <-httpErrChan:
