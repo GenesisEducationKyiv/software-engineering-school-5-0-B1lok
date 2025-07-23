@@ -3,14 +3,17 @@ package subscription
 import (
 	"context"
 
+	"subscription-service/internal/application/event"
+	"subscription-service/internal/application/event/subscription"
+
 	"subscription-service/internal/application/command"
 	"subscription-service/internal/domain"
 	internalErrors "subscription-service/internal/errors"
 	pkgErrors "subscription-service/pkg/errors"
 )
 
-type ConfirmationNotifier interface {
-	NotifyConfirmation(subscription *domain.Subscription) error
+type EventDispatcher interface {
+	Dispatch(ctx context.Context, event event.Event) error
 }
 
 type Repository interface {
@@ -28,16 +31,16 @@ type CityValidator interface {
 type Service struct {
 	repository Repository
 	validator  CityValidator
-	notifier   ConfirmationNotifier
+	dispatcher EventDispatcher
 }
 
 func NewService(
 	repository Repository,
 	validator CityValidator,
-	notifier ConfirmationNotifier,
+	dispatcher EventDispatcher,
 ) *Service {
 	return &Service{
-		repository: repository, validator: validator, notifier: notifier,
+		repository: repository, validator: validator, dispatcher: dispatcher,
 	}
 }
 
@@ -59,7 +62,13 @@ func (s *Service) Subscribe(
 	if err != nil {
 		return err
 	}
-	if err := s.notifier.NotifyConfirmation(newSubscription); err != nil {
+	if err := s.dispatcher.Dispatch(ctx, &subscription.UserSubscribedEvent{
+		ID:        newSubscription.ID,
+		Email:     newSubscription.Email,
+		City:      newSubscription.City,
+		Frequency: newSubscription.Frequency,
+		Token:     newSubscription.Token,
+	}); err != nil {
 		return err
 	}
 
@@ -67,18 +76,18 @@ func (s *Service) Subscribe(
 }
 
 func (s *Service) Confirm(ctx context.Context, token string) error {
-	subscription, err := s.repository.FindByToken(ctx, token)
+	sub, err := s.repository.FindByToken(ctx, token)
 	if err != nil {
 		return err
 	}
 
-	if subscription == nil {
+	if sub == nil {
 		return pkgErrors.New(internalErrors.ErrNotFound, "Token not found")
 	}
 
-	subscription.SetConfirmed(true)
+	sub.SetConfirmed(true)
 
-	_, err = s.repository.Update(ctx, subscription)
+	_, err = s.repository.Update(ctx, sub)
 	if err != nil {
 		return err
 	}
@@ -86,16 +95,16 @@ func (s *Service) Confirm(ctx context.Context, token string) error {
 }
 
 func (s *Service) Unsubscribe(ctx context.Context, token string) error {
-	subscription, err := s.repository.FindByToken(ctx, token)
+	sub, err := s.repository.FindByToken(ctx, token)
 	if err != nil {
 		return err
 	}
 
-	if subscription == nil {
+	if sub == nil {
 		return pkgErrors.New(internalErrors.ErrNotFound, "Token not found")
 	}
 
-	return s.repository.Delete(ctx, subscription.ID)
+	return s.repository.Delete(ctx, sub.ID)
 }
 
 func (s *Service) setValidatedCity(

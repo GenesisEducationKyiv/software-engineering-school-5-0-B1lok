@@ -28,12 +28,16 @@ func (s *Handler) Subscribe(
 	ctx context.Context,
 	request *SubscribeRequest,
 ) (*ResponseMessage, error) {
+	err := request.ValidateAll()
+	if err != nil {
+		return nil, pkgErrors.New(internalErrors.ErrInvalidInput, err.Error())
+	}
 	cmd := &command.SubscribeCommand{
 		Email:     request.Email,
 		City:      request.City,
 		Frequency: request.Frequency,
 	}
-	err := s.service.Subscribe(ctx, cmd)
+	err = s.service.Subscribe(ctx, cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -42,11 +46,13 @@ func (s *Handler) Subscribe(
 }
 
 func (s *Handler) Confirm(ctx context.Context, request *TokenRequest) (*ResponseMessage, error) {
-	token := strings.TrimSpace(request.Token)
-	if token == "" {
-		return nil, pkgErrors.New(internalErrors.ErrInvalidInput, "Invalid token")
+	err := request.ValidateAll()
+	if err != nil {
+		return nil, pkgErrors.New(internalErrors.ErrInvalidInput, err.Error())
 	}
-	err := s.service.Confirm(ctx, token)
+	token := strings.TrimSpace(request.Token)
+
+	err = s.service.Confirm(ctx, token)
 	if err != nil {
 		return nil, err
 	}
@@ -57,11 +63,13 @@ func (s *Handler) Unsubscribe(
 	ctx context.Context,
 	request *TokenRequest,
 ) (*ResponseMessage, error) {
-	token := strings.TrimSpace(request.Token)
-	if token == "" {
-		return nil, pkgErrors.New(internalErrors.ErrInvalidInput, "Invalid token")
+	err := request.ValidateAll()
+	if err != nil {
+		return nil, pkgErrors.New(internalErrors.ErrInvalidInput, err.Error())
 	}
-	err := s.service.Unsubscribe(ctx, token)
+	token := strings.TrimSpace(request.Token)
+
+	err = s.service.Unsubscribe(ctx, token)
 	if err != nil {
 		return nil, err
 	}

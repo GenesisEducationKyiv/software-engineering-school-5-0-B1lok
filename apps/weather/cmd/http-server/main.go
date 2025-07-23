@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -35,7 +36,7 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		log.Fatalf("Application failed to start: %v", err)
+		log.Fatal().Err(err).Msg("application failed to start")
 	}
 }
 
@@ -156,7 +157,7 @@ func run() error {
 	}()
 
 	serverAddr := fmt.Sprintf(":%s", cfg.Server.HttpPort)
-	log.Printf("Server starting on %s", serverAddr)
+	log.Info().Str("address", serverAddr).Msg("Starting HTTP server")
 	if err := router.Run(serverAddr); err != nil {
 		return fmt.Errorf("failed to start server: %w", err)
 	}

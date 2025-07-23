@@ -2,7 +2,8 @@ package config
 
 import (
 	"fmt"
-	"log"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/iamolegga/enviper"
@@ -39,7 +40,7 @@ type ServerConfig struct {
 
 func LoadConfig() (Config, error) {
 	if err := loadEnvFile(defaultEnvFile); err != nil {
-		log.Printf("warning: %v", err)
+		log.Warn().Err(err).Msgf("Could not load config")
 	}
 
 	var config Config

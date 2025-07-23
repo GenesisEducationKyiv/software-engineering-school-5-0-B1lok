@@ -2,8 +2,9 @@ package postgres
 
 import (
 	"fmt"
-	"log"
 	"net/url"
+
+	"github.com/rs/zerolog/log"
 
 	"subscription-service/internal/config"
 
@@ -17,12 +18,12 @@ func RunMigrations(cfg config.DBConfig) {
 
 	m, err := migrate.New("file://migrations", connectionString)
 	if err != nil {
-		log.Printf("Migration initialization failed: %v", err)
+		log.Error().Err(err).Msgf("Could not connect to migrations")
 		return
 	}
 
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		log.Printf("Migration failed: %v", err)
+		log.Error().Err(err).Msgf("Could not run migrations")
 	}
 }
 
@@ -32,11 +33,11 @@ func RunMigrationsWithPath(cfg config.DBConfig, migrationPath string) {
 
 	m, err := migrate.New(migrationPath, connectionString)
 	if err != nil {
-		log.Printf("Migration initialization failed: %v", err)
+		log.Error().Err(err).Msgf("Could not connect to migrations")
 		return
 	}
 
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		log.Printf("Migration failed: %v", err)
+		log.Error().Err(err).Msgf("Could not run migrations")
 	}
 }

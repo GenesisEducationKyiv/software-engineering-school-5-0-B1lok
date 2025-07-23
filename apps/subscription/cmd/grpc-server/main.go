@@ -3,11 +3,18 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/rs/zerolog/log"
+
+	"subscription-service/internal/application/event"
+	"subscription-service/internal/infrastructure/db/postgres/outbox"
+	pgevent "subscription-service/internal/infrastructure/db/postgres/outbox/event"
+	"subscription-service/internal/infrastructure/db/postgres/outbox/relay"
+	pgsubscription "subscription-service/internal/infrastructure/db/postgres/subscription"
 
 	_ "github.com/B1lok/proto-contracts"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -20,13 +27,14 @@ import (
 	"subscription-service/internal/infrastructure/db/postgres"
 	"subscription-service/internal/infrastructure/grpc/validator"
 	"subscription-service/internal/infrastructure/rabbitmq"
+	rbevent "subscription-service/internal/infrastructure/rabbitmq/event"
 	grpcsubscription "subscription-service/internal/interface/grpc/subscription"
 	"subscription-service/pkg/middleware"
 )
 
 func main() {
 	if err := run(); err != nil {
-		log.Fatalf("Application failed to start: %v", err)
+		log.Fatal().Err(err).Msg("application failed to start")
 	}
 }
 
@@ -55,7 +63,7 @@ func run() error {
 	}
 	defer func() {
 		if closeErr := conn.Close(); closeErr != nil {
-			log.Printf("Failed to close connection: %v", closeErr)
+			log.Error().Err(closeErr).Msg("failed to close validation client connection")
 		}
 	}()
 	cityValidator := validator.NewCityValidator(validationClient)
@@ -67,7 +75,7 @@ func run() error {
 	}
 	defer func() {
 		if err := rabbitConn.Close(); err != nil {
-			log.Printf("Failed to close RabbitMQ connection: %v", err)
+			log.Error().Err(err).Msg("failed to close RabbitMQ connection")
 		}
 	}()
 
@@ -78,22 +86,30 @@ func run() error {
 	}
 	defer func() {
 		if err := rabbitmqChannel.Close(); err != nil {
-			log.Printf("Failed to close RabbitMQ channel: %v", err)
+			log.Error().Err(err).Msg("failed to close RabbitMQ channel")
 		}
 	}()
 
-	if err := rabbitmq.DeclareQueues(rabbitmqChannel); err != nil {
+	if err := rabbitmq.DeclareQueues(rabbitmqChannel, rabbitmq.GetAppQueueConfigs()); err != nil {
 		cancel()
 		return fmt.Errorf("failed to declare RabbitMQ queues: %w", err)
 	}
 
 	// Initialize repositories
-	subscriptionRepo := postgres.NewSubscriptionRepository(db)
+	subscriptionRepo := pgsubscription.NewRepository(db)
+	outboxRepo := outbox.NewOutboxRepository(db)
 
 	// Initialize services
-	publisher := rabbitmq.NewPublisher(rabbitmqChannel, cfg.Server.Host)
+	publisher, err := rabbitmq.NewPublisher(rabbitmqChannel)
+	if err != nil {
+		cancel()
+		return fmt.Errorf("failed to create RabbitMQ publisher: %w", err)
+	}
+	dispatcher := event.NewDispatcher()
+	dispatcher.Register(pgevent.NewUserSubscribedHandler(cfg.Server.Host, outboxRepo))
+	dispatcher.Register(rbevent.NewWeatherUpdateHandler(cfg.Server.Host, publisher))
 	subscriptionService := subscription.NewService(
-		subscriptionRepo, cityValidator, publisher)
+		subscriptionRepo, cityValidator, dispatcher)
 
 	// Initialize handlers
 	subscriptionHandler := grpcsubscription.NewHandler(subscriptionService)
@@ -101,9 +117,10 @@ func run() error {
 	// Initialize workers
 	jobManager := scheduled.NewJobManager(ctx)
 	jobManager.RegisterJob(scheduled.NewHourlyWeatherUpdateJob(
-		subscriptionRepo, publisher))
+		subscriptionRepo, dispatcher))
 	jobManager.RegisterJob(scheduled.NewDailyWeatherUpdateJob(
-		subscriptionRepo, publisher))
+		subscriptionRepo, dispatcher))
+	jobManager.RegisterJob(relay.NewRelayJob(publisher, txManager, outboxRepo))
 	go jobManager.StartScheduler()
 
 	// Initialize server
@@ -123,11 +140,11 @@ func run() error {
 
 	go func() {
 		<-ctx.Done()
-		log.Println("Shutting down gRPC server...")
+		log.Info().Msg("Shutting down gRPC server...")
 		s.GracefulStop()
 	}()
 
-	log.Printf("server listening at %v", lis.Addr())
+	log.Info().Msgf("gRPC server listening on :%s", cfg.Server.GrpcPort)
 	if err := s.Serve(lis); err != nil {
 		return fmt.Errorf("failed to serve: %v", err)
 	}

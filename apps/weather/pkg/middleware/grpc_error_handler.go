@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -25,7 +27,20 @@ func GrpcErrorInterceptor() grpc.UnaryServerInterceptor {
 		}
 
 		if apiErr, ok := pkgErrors.IsApiError(err); ok {
+			grpcCode := toGrpcCode(apiErr.Base)
 			st := status.New(toGrpcCode(apiErr.Base), apiErr.Message)
+			if grpcCode == codes.InvalidArgument {
+				badReq := &errdetails.BadRequest{
+					FieldViolations: []*errdetails.BadRequest_FieldViolation{
+						{
+							Field:       "city",
+							Description: apiErr.Message,
+						},
+					},
+				}
+				st, _ = st.WithDetails(badReq)
+			}
+
 			return nil, st.Err()
 		}
 

@@ -1,87 +1,125 @@
 package rabbitmq
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/rabbitmq/amqp091-go"
-
-	"subscription-service/internal/domain"
 )
 
+const bufferSize = 1000
+
+type publishRequest struct {
+	ctx     context.Context
+	queue   string
+	payload []byte
+	headers map[string]interface{}
+	done    chan error
+}
+
 type Publisher struct {
-	channel *amqp091.Channel
-	host    string
+	channel     *amqp091.Channel
+	confirmChan <-chan amqp091.Confirmation
+	requests    chan publishRequest
 }
 
-func NewPublisher(channel *amqp091.Channel, serverHost string) *Publisher {
-	return &Publisher{
-		host:    serverHost,
-		channel: channel,
+func NewPublisher(channel *amqp091.Channel) (*Publisher, error) {
+	if err := channel.Confirm(false); err != nil {
+		return nil, fmt.Errorf("failed to enable publisher confirms: %w", err)
+	}
+	confirmChan := channel.NotifyPublish(make(chan amqp091.Confirmation, 1))
+
+	p := &Publisher{
+		channel:     channel,
+		confirmChan: confirmChan,
+		requests:    make(chan publishRequest, bufferSize),
+	}
+
+	go p.startPublisherLoop()
+
+	return p, nil
+}
+
+func (p *Publisher) startPublisherLoop() {
+	for req := range p.requests {
+		err := p.publishWithConfirm(req.ctx, req.queue, req.payload, req.headers)
+		req.done <- err
 	}
 }
 
-func (p *Publisher) NotifyConfirmation(subscription *domain.Subscription) error {
-	msg := ConfirmationEmailMessage{
-		To:        subscription.Email,
-		City:      subscription.City,
-		Frequency: string(subscription.Frequency),
-		URL:       fmt.Sprintf("%s/api/confirm/%s", p.host, subscription.Token),
+func (p *Publisher) publishWithConfirm(
+	ctx context.Context,
+	queue string,
+	payload []byte,
+	headers map[string]interface{},
+) error {
+	var amqpHeaders amqp091.Table
+	if headers != nil {
+		amqpHeaders = amqp091.Table{}
+		for k, v := range headers {
+			amqpHeaders[k] = v
+		}
 	}
 
-	body, err := json.Marshal(msg)
-	if err != nil {
-		return fmt.Errorf("failed to marshal message: %w", err)
-	}
-
-	err = p.channel.Publish(
+	err := p.channel.PublishWithContext(
+		ctx,
 		"",
-		confirmationQueue,
+		queue,
 		false,
 		false,
 		amqp091.Publishing{
 			ContentType: "application/json",
-			Body:        body,
+			Body:        payload,
+			Headers:     amqpHeaders,
 		},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to publish message: %w", err)
 	}
 
+	select {
+	case confirm := <-p.confirmChan:
+		if !confirm.Ack {
+			return fmt.Errorf("message not acknowledged by the broker")
+		}
+	case <-ctx.Done():
+		return fmt.Errorf("publish canceled: %w", ctx.Err())
+	case <-time.After(2 * time.Second):
+		return fmt.Errorf("timeout waiting for publisher confirmation")
+	}
+
 	return nil
 }
 
-func (p *Publisher) NotifyWeatherUpdate(subscription *domain.Subscription) error {
-	msg := WeatherUpdateMessage{
-		To:             subscription.Email,
-		City:           subscription.City,
-		Frequency:      string(subscription.Frequency),
-		UnsubscribeURL: fmt.Sprintf("%s/api/unsubscribe/%s", p.host, subscription.Token),
+func (p *Publisher) Publish(ctx context.Context, queue string, payload []byte) error {
+	return p.PublishWithHeaders(ctx, queue, payload, nil)
+}
+
+func (p *Publisher) PublishWithHeaders(
+	ctx context.Context,
+	queue string,
+	payload []byte,
+	headers map[string]interface{},
+) error {
+	done := make(chan error, 1)
+
+	select {
+	case p.requests <- publishRequest{
+		ctx:     ctx,
+		queue:   queue,
+		payload: payload,
+		headers: headers,
+		done:    done,
+	}:
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 
-	body, err := json.Marshal(msg)
-	if err != nil {
-		return fmt.Errorf("failed to marshal message: %w", err)
+	select {
+	case err := <-done:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
 	}
-	queueName := weatherDailyQueue
-	if subscription.Frequency == domain.FrequencyHourly {
-		queueName = weatherHourlyQueue
-	}
-
-	err = p.channel.Publish(
-		"",
-		queueName,
-		false,
-		false,
-		amqp091.Publishing{
-			ContentType: "application/json",
-			Body:        body,
-		},
-	)
-
-	if err != nil {
-		return fmt.Errorf("failed to publish message: %w", err)
-	}
-
-	return nil
 }

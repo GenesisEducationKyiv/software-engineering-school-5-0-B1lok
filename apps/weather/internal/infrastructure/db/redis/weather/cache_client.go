@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"weather-service/internal/domain"
 	appRedis "weather-service/internal/infrastructure/db/redis"
@@ -85,7 +86,7 @@ func (c *ProxyClient) GetDailyForecast(
 		if err := appRedis.Set(
 			ctx, c.redis, key, data, c.provider.TTL(ForecastDaily),
 		); err != nil {
-			log.Printf("proxy: failed to set cache for key %s: %v\n", key, err)
+			log.Error().Err(err).Str("key", key).Msg("proxy: failed to set cache for daily forecast")
 		}
 	}
 
@@ -116,7 +117,7 @@ func (c *ProxyClient) GetHourlyForecast(
 		if err := appRedis.Set(
 			ctx, c.redis, key, data, c.provider.TTL(ForecastHourly),
 		); err != nil {
-			log.Printf("proxy: failed to set cache for key %s: %v\n", key, err)
+			log.Error().Err(err).Str("key", key).Msg("proxy: failed to set cache for hourly forecast")
 		}
 	}
 
@@ -145,7 +146,7 @@ func (c *ProxyClient) GetWeather(ctx context.Context, city string) (*domain.Weat
 		if err := appRedis.Set(
 			ctx, c.redis, key, data, c.provider.TTL(ForecastCurrent),
 		); err != nil {
-			log.Printf("proxy: failed to set cache for key %s: %v\n", key, err)
+			log.Error().Err(err).Str("key", key).Msg("proxy: failed to set cache for current weather")
 		}
 	}
 

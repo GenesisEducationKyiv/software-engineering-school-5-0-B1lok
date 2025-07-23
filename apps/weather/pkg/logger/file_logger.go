@@ -4,15 +4,15 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/rs/zerolog"
 )
 
 type FileLogger struct {
-	logChannel chan string
-	file       *os.File
+	logger zerolog.Logger
 }
 
 func NewFileLogger(logFilepath string) (*FileLogger, error) {
@@ -31,45 +31,35 @@ func NewFileLogger(logFilepath string) (*FileLogger, error) {
 		return nil, err
 	}
 
-	logger := &FileLogger{
-		logChannel: make(chan string, 1000),
-		file:       file,
-	}
+	zlogger := zerolog.New(file).
+		With().
+		Timestamp().
+		Logger()
 
-	go logger.processLogs()
-	return logger, nil
+	return &FileLogger{logger: zlogger}, nil
 }
 
 func (l *FileLogger) LogResponse(provider string, resp *http.Response) {
 	if resp == nil || resp.Body == nil {
-		l.log(fmt.Sprintf("%s - Empty response", provider))
+		l.logger.Warn().
+			Str("provider", provider).
+			Msg("Empty response")
 		return
 	}
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		l.log(fmt.Sprintf("%s - Failed to read body: %v", provider, err))
+		l.logger.Error().
+			Str("provider", provider).
+			Err(err).
+			Msg("Failed to read body")
 		return
 	}
 
-	l.log(fmt.Sprintf("%s - %s", provider, string(bodyBytes)))
+	l.logger.Info().
+		Str("provider", provider).
+		RawJSON("body", bodyBytes).
+		Msg("Received response")
 
 	resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-}
-
-func (l *FileLogger) log(message string) {
-	select {
-	case l.logChannel <- message:
-	default:
-		log.Println("Log channel full, dropping log:", message)
-	}
-}
-
-func (l *FileLogger) processLogs() {
-	for logEntry := range l.logChannel {
-		_, err := l.file.WriteString(logEntry + "\n")
-		if err != nil {
-			log.Printf("Error writing to log file: %v\n", err)
-		}
-	}
 }

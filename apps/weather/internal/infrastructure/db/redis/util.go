@@ -3,8 +3,9 @@ package redis
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -12,17 +13,17 @@ import (
 func Get[T any](ctx context.Context, client *redis.Client, key string) (*T, error) {
 	raw, err := client.Get(ctx, key).Result()
 	if err != nil {
-		log.Printf("redis: error for key=%s: %v\n", key, err)
+		log.Error().Err(err).Str("key", key).Msg("failed to get value")
 		return nil, err
 	}
 
 	var result T
 	if err := json.Unmarshal([]byte(raw), &result); err != nil {
-		log.Printf("redis: unmarshal error for key=%s: %v\n", key, err)
+		log.Error().Err(err).Str("key", key).Msg("failed to unmarshal value")
 		return nil, err
 	}
 
-	log.Printf("redis: get key=%s success\n", key)
+	log.Debug().Str("key", key).Msg("redis: get key success")
 	return &result, nil
 }
 
@@ -42,6 +43,6 @@ func Set(
 		return err
 	}
 
-	log.Printf("redis: set key=%s ttl=%s success\n", key, ttl.String())
+	log.Debug().Str("key", key).Msg("redis: set key success")
 	return nil
 }

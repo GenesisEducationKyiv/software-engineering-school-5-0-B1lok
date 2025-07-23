@@ -2,7 +2,8 @@ package config
 
 import (
 	"fmt"
-	"log"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/iamolegga/enviper"
@@ -42,7 +43,7 @@ type RedisConfig struct {
 
 func LoadConfig() (Config, error) {
 	if err := loadEnvFile(defaultEnvFile); err != nil {
-		log.Printf("warning: %v", err)
+		log.Warn().Err(err).Msg("failed to load .env file, using default values")
 	}
 
 	var config Config

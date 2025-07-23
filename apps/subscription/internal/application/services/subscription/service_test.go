@@ -24,9 +24,9 @@ const (
 func TestSubscriptionService_Subscribe_Success(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
-	mockNotifier := new(mocks.MockNotifier)
+	mockDispatcher := new(mocks.MockEventDispatcher)
 
-	service := NewService(mockRepo, mockValidator, mockNotifier)
+	service := NewService(mockRepo, mockValidator, mockDispatcher)
 
 	ctx := context.Background()
 	cmd := &command.SubscribeCommand{
@@ -52,22 +52,22 @@ func TestSubscriptionService_Subscribe_Success(t *testing.T) {
 
 	mockRepo.On("Create", ctx, mock.AnythingOfType("*domain.Subscription")).Return(subscription, nil)
 
-	mockNotifier.On("NotifyConfirmation", mock.AnythingOfType("*domain.Subscription")).Return(nil)
+	mockDispatcher.On("Dispatch", ctx, mock.AnythingOfType("*subscription.UserSubscribedEvent")).Return(nil)
 
 	err := service.Subscribe(ctx, cmd)
 
 	assert.NoError(t, err)
 	mockValidator.AssertExpectations(t)
 	mockRepo.AssertExpectations(t)
-	mockNotifier.AssertExpectations(t)
+	mockDispatcher.AssertExpectations(t)
 }
 
 func TestSubscriptionService_Subscribe_InvalidCity(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
-	mockNotifier := new(mocks.MockNotifier)
+	mockDispatcher := new(mocks.MockEventDispatcher)
 
-	service := NewService(mockRepo, mockValidator, mockNotifier)
+	service := NewService(mockRepo, mockValidator, mockDispatcher)
 
 	ctx := context.Background()
 	cmd := &command.SubscribeCommand{
@@ -86,16 +86,16 @@ func TestSubscriptionService_Subscribe_InvalidCity(t *testing.T) {
 	mockValidator.AssertExpectations(t)
 	mockRepo.AssertNotCalled(t, "ExistByLookup")
 	mockRepo.AssertNotCalled(t, "Create")
-	mockNotifier.AssertNotCalled(t, "NotifyConfirmation")
+	mockDispatcher.AssertNotCalled(t, "Dispatch")
 }
 
 func TestSubscriptionService_Subscribe_AlreadyExists(t *testing.T) {
 
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
-	mockNotifier := new(mocks.MockNotifier)
+	mockDispatcher := new(mocks.MockEventDispatcher)
 
-	service := NewService(mockRepo, mockValidator, mockNotifier)
+	service := NewService(mockRepo, mockValidator, mockDispatcher)
 
 	ctx := context.Background()
 	cmd := &command.SubscribeCommand{
@@ -124,15 +124,15 @@ func TestSubscriptionService_Subscribe_AlreadyExists(t *testing.T) {
 	mockValidator.AssertExpectations(t)
 	mockRepo.AssertExpectations(t)
 	mockRepo.AssertNotCalled(t, "Create")
-	mockNotifier.AssertNotCalled(t, "NotifyConfirmation")
+	mockDispatcher.AssertNotCalled(t, "Dispatch")
 }
 
 func TestSubscriptionService_Subscribe_RepositoryError(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
-	mockNotifier := new(mocks.MockNotifier)
+	mockDispatcher := new(mocks.MockEventDispatcher)
 
-	service := NewService(mockRepo, mockValidator, mockNotifier)
+	service := NewService(mockRepo, mockValidator, mockDispatcher)
 
 	ctx := context.Background()
 	cmd := &command.SubscribeCommand{
@@ -162,15 +162,15 @@ func TestSubscriptionService_Subscribe_RepositoryError(t *testing.T) {
 	mockValidator.AssertExpectations(t)
 	mockRepo.AssertExpectations(t)
 	mockRepo.AssertNotCalled(t, "Create")
-	mockNotifier.AssertNotCalled(t, "NotifyConfirmation")
+	mockDispatcher.AssertNotCalled(t, "Dispatch")
 }
 
 func TestSubscriptionService_Subscribe_InvalidFrequency(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
-	mockNotifier := new(mocks.MockNotifier)
+	mockDispatcher := new(mocks.MockEventDispatcher)
 
-	service := NewService(mockRepo, mockValidator, mockNotifier)
+	service := NewService(mockRepo, mockValidator, mockDispatcher)
 
 	ctx := context.Background()
 	cmd := &command.SubscribeCommand{
@@ -200,15 +200,15 @@ func TestSubscriptionService_Subscribe_InvalidFrequency(t *testing.T) {
 	mockValidator.AssertExpectations(t)
 	mockRepo.AssertExpectations(t)
 	mockRepo.AssertNotCalled(t, "Create")
-	mockNotifier.AssertNotCalled(t, "NotifyConfirmation")
+	mockDispatcher.AssertNotCalled(t, "Dispatch")
 }
 
 func TestSubscriptionService_Subscribe_CreateError(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
-	mockNotifier := new(mocks.MockNotifier)
+	mockDispatcher := new(mocks.MockEventDispatcher)
 
-	service := NewService(mockRepo, mockValidator, mockNotifier)
+	service := NewService(mockRepo, mockValidator, mockDispatcher)
 
 	ctx := context.Background()
 	cmd := &command.SubscribeCommand{
@@ -239,15 +239,15 @@ func TestSubscriptionService_Subscribe_CreateError(t *testing.T) {
 
 	mockValidator.AssertExpectations(t)
 	mockRepo.AssertExpectations(t)
-	mockNotifier.AssertNotCalled(t, "NotifyConfirmation")
+	mockDispatcher.AssertNotCalled(t, "Dispatch")
 }
 
-func TestSubscriptionService_Subscribe_EmailError(t *testing.T) {
+func TestSubscriptionService_Subscribe_EventError(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
-	mockNotifier := new(mocks.MockNotifier)
+	mockDispatcher := new(mocks.MockEventDispatcher)
 
-	service := NewService(mockRepo, mockValidator, mockNotifier)
+	service := NewService(mockRepo, mockValidator, mockDispatcher)
 
 	ctx := context.Background()
 	cmd := &command.SubscribeCommand{
@@ -272,27 +272,27 @@ func TestSubscriptionService_Subscribe_EmailError(t *testing.T) {
 	}
 	mockRepo.On("Create", ctx, mock.AnythingOfType("*domain.Subscription")).Return(subscription, nil)
 
-	emailErr := errors.New(internalErrors.ErrInternal, "Failed to send email")
-	mockNotifier.On(
-		"NotifyConfirmation", mock.AnythingOfType("*domain.Subscription"),
-	).Return(emailErr)
+	eventErr := errors.New(internalErrors.ErrInternal, "Failed to dispatch event")
+	mockDispatcher.On(
+		"Dispatch", ctx, mock.AnythingOfType("*subscription.UserSubscribedEvent"),
+	).Return(eventErr)
 
 	err := service.Subscribe(ctx, cmd)
 
 	assert.Error(t, err)
-	assert.Equal(t, emailErr, err)
+	assert.Equal(t, eventErr, err)
 
 	mockValidator.AssertExpectations(t)
 	mockRepo.AssertExpectations(t)
-	mockNotifier.AssertExpectations(t)
+	mockDispatcher.AssertExpectations(t)
 }
 
 func TestSubscriptionService_Confirm_Success(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
-	mockNotifier := new(mocks.MockNotifier)
+	mockDispatcher := new(mocks.MockEventDispatcher)
 
-	service := NewService(mockRepo, mockValidator, mockNotifier)
+	service := NewService(mockRepo, mockValidator, mockDispatcher)
 
 	ctx := context.Background()
 	token := validToken
@@ -329,9 +329,9 @@ func TestSubscriptionService_Confirm_Success(t *testing.T) {
 func TestSubscriptionService_Confirm_TokenNotFound(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
-	mockNotifier := new(mocks.MockNotifier)
+	mockDispatcher := new(mocks.MockEventDispatcher)
 
-	service := NewService(mockRepo, mockValidator, mockNotifier)
+	service := NewService(mockRepo, mockValidator, mockDispatcher)
 
 	ctx := context.Background()
 	token := "invalid-token"
@@ -353,9 +353,9 @@ func TestSubscriptionService_Confirm_TokenNotFound(t *testing.T) {
 func TestSubscriptionService_Confirm_RepositoryError(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
-	mockNotifier := new(mocks.MockNotifier)
+	mockDispatcher := new(mocks.MockEventDispatcher)
 
-	service := NewService(mockRepo, mockValidator, mockNotifier)
+	service := NewService(mockRepo, mockValidator, mockDispatcher)
 
 	ctx := context.Background()
 	token := validToken
@@ -378,9 +378,9 @@ func TestSubscriptionService_Confirm_RepositoryError(t *testing.T) {
 func TestSubscriptionService_Confirm_UpdateError(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
-	mockNotifier := new(mocks.MockNotifier)
+	mockDispatcher := new(mocks.MockEventDispatcher)
 
-	service := NewService(mockRepo, mockValidator, mockNotifier)
+	service := NewService(mockRepo, mockValidator, mockDispatcher)
 
 	ctx := context.Background()
 	token := validToken
@@ -413,9 +413,9 @@ func TestSubscriptionService_Confirm_UpdateError(t *testing.T) {
 func TestSubscriptionService_Unsubscribe_Success(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
-	mockNotifier := new(mocks.MockNotifier)
+	mockDispatcher := new(mocks.MockEventDispatcher)
 
-	service := NewService(mockRepo, mockValidator, mockNotifier)
+	service := NewService(mockRepo, mockValidator, mockDispatcher)
 
 	ctx := context.Background()
 	token := validToken
@@ -441,9 +441,9 @@ func TestSubscriptionService_Unsubscribe_Success(t *testing.T) {
 func TestSubscriptionService_Unsubscribe_TokenNotFound(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
-	mockNotifier := new(mocks.MockNotifier)
+	mockDispatcher := new(mocks.MockEventDispatcher)
 
-	service := NewService(mockRepo, mockValidator, mockNotifier)
+	service := NewService(mockRepo, mockValidator, mockDispatcher)
 
 	ctx := context.Background()
 	token := "invalid-token"
@@ -465,9 +465,9 @@ func TestSubscriptionService_Unsubscribe_TokenNotFound(t *testing.T) {
 func TestSubscriptionService_Unsubscribe_RepositoryError(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
-	mockNotifier := new(mocks.MockNotifier)
+	mockDispatcher := new(mocks.MockEventDispatcher)
 
-	service := NewService(mockRepo, mockValidator, mockNotifier)
+	service := NewService(mockRepo, mockValidator, mockDispatcher)
 
 	ctx := context.Background()
 	token := validToken
@@ -490,9 +490,9 @@ func TestSubscriptionService_Unsubscribe_RepositoryError(t *testing.T) {
 func TestSubscriptionService_Unsubscribe_DeleteError(t *testing.T) {
 	mockRepo := new(mocks.MockSubscriptionRepository)
 	mockValidator := new(mocks.MockCityValidator)
-	mockNotifier := new(mocks.MockNotifier)
+	mockDispatcher := new(mocks.MockEventDispatcher)
 
-	service := NewService(mockRepo, mockValidator, mockNotifier)
+	service := NewService(mockRepo, mockValidator, mockDispatcher)
 
 	ctx := context.Background()
 	token := validToken

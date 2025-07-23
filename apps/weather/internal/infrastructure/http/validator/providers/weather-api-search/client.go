@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	internalErrors "weather-service/internal/errors"
 	appHttp "weather-service/internal/infrastructure/http"
@@ -53,7 +54,7 @@ func (h *Client) Validate(ctx context.Context, city string) (*string, error) {
 	h.logger.LogResponse(providerName, resp)
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			log.Println("Error closing response body:", err)
+			log.Error().Err(err).Msg("failed to close response body")
 		}
 	}()
 

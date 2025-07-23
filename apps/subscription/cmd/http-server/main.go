@@ -3,10 +3,17 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/rs/zerolog/log"
+
+	"subscription-service/internal/application/event"
+	"subscription-service/internal/infrastructure/db/postgres/outbox"
+	pgevent "subscription-service/internal/infrastructure/db/postgres/outbox/event"
+	pgsubscription "subscription-service/internal/infrastructure/db/postgres/subscription"
+	rbevent "subscription-service/internal/infrastructure/rabbitmq/event"
 
 	"subscription-service/internal/application/scheduled"
 	"subscription-service/internal/application/services/subscription"
@@ -24,7 +31,7 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		log.Fatalf("Application failed to start: %v", err)
+		log.Fatal().Err(err).Msg("application failed to start")
 	}
 }
 
@@ -54,7 +61,7 @@ func run() error {
 	defer func() {
 		if conn != nil {
 			if closeErr := conn.Close(); closeErr != nil {
-				log.Printf("Failed to close connection: %v", closeErr)
+				log.Error().Err(closeErr).Msg("failed to close connection")
 			}
 		}
 	}()
@@ -67,7 +74,7 @@ func run() error {
 	}
 	defer func() {
 		if err := rabbitConn.Close(); err != nil {
-			log.Printf("Failed to close RabbitMQ connection: %v", err)
+			log.Error().Err(err).Msg("failed to close connection")
 		}
 	}()
 
@@ -78,22 +85,30 @@ func run() error {
 	}
 	defer func() {
 		if err := rabbitmqChannel.Close(); err != nil {
-			log.Printf("Failed to close RabbitMQ channel: %v", err)
+			log.Error().Err(err).Msg("failed to close RabbitMQ channel")
 		}
 	}()
 
-	if err := rabbitmq.DeclareQueues(rabbitmqChannel); err != nil {
+	if err := rabbitmq.DeclareQueues(rabbitmqChannel, rabbitmq.GetAppQueueConfigs()); err != nil {
 		cancel()
 		return fmt.Errorf("failed to declare RabbitMQ queues: %w", err)
 	}
 
 	// Initialize repositories
-	subscriptionRepo := postgres.NewSubscriptionRepository(db)
+	subscriptionRepo := pgsubscription.NewRepository(db)
+	outboxRepo := outbox.NewOutboxRepository(db)
 
 	// Initialize services
-	publisher := rabbitmq.NewPublisher(rabbitmqChannel, cfg.Server.Host)
+	publisher, err := rabbitmq.NewPublisher(rabbitmqChannel)
+	if err != nil {
+		cancel()
+		return fmt.Errorf("failed to create RabbitMQ publisher: %w", err)
+	}
+	dispatcher := event.NewDispatcher()
+	dispatcher.Register(pgevent.NewUserSubscribedHandler(cfg.Server.Host, outboxRepo))
+	dispatcher.Register(rbevent.NewWeatherUpdateHandler(cfg.Server.Host, publisher))
 	subscriptionService := subscription.NewService(
-		subscriptionRepo, cityValidator, publisher)
+		subscriptionRepo, cityValidator, dispatcher)
 
 	// Initialize controllers
 	subscriptionController := rest.NewSubscriptionController(subscriptionService)
@@ -101,9 +116,9 @@ func run() error {
 	// Initialize workers
 	jobManager := scheduled.NewJobManager(ctx)
 	jobManager.RegisterJob(scheduled.NewHourlyWeatherUpdateJob(
-		subscriptionRepo, publisher))
+		subscriptionRepo, dispatcher))
 	jobManager.RegisterJob(scheduled.NewDailyWeatherUpdateJob(
-		subscriptionRepo, publisher))
+		subscriptionRepo, dispatcher))
 	go jobManager.StartScheduler()
 
 	// Initialize router
@@ -131,7 +146,7 @@ func run() error {
 	}()
 
 	serverAddr := fmt.Sprintf(":%s", cfg.Server.HttpPort)
-	log.Printf("Server starting on %s", serverAddr)
+	log.Info().Str("address", serverAddr).Msg("Starting HTTP server")
 	if err := router.Run(serverAddr); err != nil {
 		return fmt.Errorf("failed to start server: %w", err)
 	}

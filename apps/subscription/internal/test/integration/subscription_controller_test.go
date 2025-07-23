@@ -7,16 +7,21 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"github.com/rs/zerolog/log"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"subscription-service/internal/application/event"
 	"subscription-service/internal/application/services/subscription"
 	"subscription-service/internal/config"
 	"subscription-service/internal/domain"
 	appPostgres "subscription-service/internal/infrastructure/db/postgres"
+	"subscription-service/internal/infrastructure/db/postgres/outbox"
+	pgevent "subscription-service/internal/infrastructure/db/postgres/outbox/event"
+	pgsubscription "subscription-service/internal/infrastructure/db/postgres/subscription"
+	rbevent "subscription-service/internal/infrastructure/rabbitmq/event"
 	"subscription-service/internal/interface/rest"
 	"subscription-service/internal/test/containers"
 	"subscription-service/internal/test/stubs"
@@ -39,6 +44,7 @@ type SubscriptionControllerTestSuite struct {
 
 func (suite *SubscriptionControllerTestSuite) SetupSuite() {
 	ctx := context.Background()
+	serverHost := "http://localhost:8080"
 
 	postgres, err := containers.SetupPostgresContainer(ctx)
 	suite.Require().NoError(err)
@@ -63,9 +69,13 @@ func (suite *SubscriptionControllerTestSuite) SetupSuite() {
 	appPostgres.RunMigrationsWithPath(cfg, getMigrationPath())
 
 	cityValidator := stubs.NewCityValidatorStub()
-	subscriptionRepo := appPostgres.NewSubscriptionRepository(db)
+	outboxRepo := outbox.NewOutboxRepository(db)
+	dispatcher := event.NewDispatcher()
+	dispatcher.Register(pgevent.NewUserSubscribedHandler(serverHost, outboxRepo))
+	dispatcher.Register(rbevent.NewWeatherUpdateHandler(serverHost, stubs.NewPublisherStub()))
+	subscriptionRepo := pgsubscription.NewRepository(db)
 	subscriptionService := subscription.NewService(
-		subscriptionRepo, cityValidator, stubs.NewConfirmationNotifierStub(),
+		subscriptionRepo, cityValidator, dispatcher,
 	)
 	subscriptionController := rest.NewSubscriptionController(subscriptionService)
 	txManager := middleware.NewTxManager(db)
@@ -262,7 +272,7 @@ func TestSubscriptionControllerTestSuite(t *testing.T) {
 func getMigrationPath() string {
 	workingDir, err := os.Getwd()
 	if err != nil {
-		log.Fatalf("Failed to get working directory: %v", err)
+		log.Fatal().Err(err).Msg("could not get working directory")
 	}
 	projectRoot := filepath.Join(workingDir, "../../..")
 	migrationsPath := filepath.Join(projectRoot, "migrations")

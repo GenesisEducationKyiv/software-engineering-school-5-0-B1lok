@@ -11,10 +11,6 @@ services:
     env_file:
       - path: apps/gateway/.env
         required: true
-  email-service:
-    env_file:
-      - path: apps/email/.env
-        required: true
   notification-service:
     env_file:
       - path: apps/notification/.env

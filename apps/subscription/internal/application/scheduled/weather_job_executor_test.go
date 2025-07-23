@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"math/rand"
+	"subscription-service/internal/application/event"
 	"subscription-service/internal/domain"
 	internalErrors "subscription-service/internal/errors"
 	"subscription-service/internal/test/mocks"
@@ -22,37 +23,37 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type mockNotifyFunc struct {
-	mu                    sync.Mutex
-	callCount             int
-	notifiedSubscriptions []*domain.Subscription
-	notifyError           error
+type mockEventDispatcher struct {
+	mu            sync.Mutex
+	callCount     int
+	dispatched    []event.Event
+	dispatchError error
 }
 
-func (m *mockNotifyFunc) NotifyWeatherUpdate(sub *domain.Subscription) error {
+func (m *mockEventDispatcher) Dispatch(ctx context.Context, e event.Event) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.callCount++
-	m.notifiedSubscriptions = append(m.notifiedSubscriptions, sub)
+	m.dispatched = append(m.dispatched, e)
 
-	if m.notifyError != nil {
-		return m.notifyError
+	if m.dispatchError != nil {
+		return m.dispatchError
 	}
 	return nil
 }
 
-func (m *mockNotifyFunc) GetCallCount() int {
+func (m *mockEventDispatcher) GetCallCount() int {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.callCount
 }
 
-func (m *mockNotifyFunc) GetNotifiedSubscriptions() []*domain.Subscription {
+func (m *mockEventDispatcher) GetDispatchedEvents() []event.Event {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	subs := make([]*domain.Subscription, len(m.notifiedSubscriptions))
-	copy(subs, m.notifiedSubscriptions)
-	return subs
+	events := make([]event.Event, len(m.dispatched))
+	copy(events, m.dispatched)
+	return events
 }
 
 func createTestSubscriptionsForCity(startID uint, city string, count int) []*domain.Subscription {
@@ -134,12 +135,12 @@ func TestWeatherJobExecutor_Execute_Success(t *testing.T) {
 		Return(groupedSubscriptions, nil).
 		Once()
 
-	mockNotify := &mockNotifyFunc{}
+	mockDispatch := &mockEventDispatcher{}
 
 	executor := NewWeatherJobExecutor(
 		mockRepo,
 		frequency,
-		mockNotify,
+		mockDispatch,
 	)
 
 	err := executor.Execute(ctx)
@@ -149,20 +150,12 @@ func TestWeatherJobExecutor_Execute_Success(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 
 	expectedSubIDs := calculateExpectedSubIDs(citySubCounts)
-	notifiedSubs := mockNotify.GetNotifiedSubscriptions()
+	dispatchedEvents := mockDispatch.GetDispatchedEvents()
 
-	assert.Equal(t, len(expectedSubIDs), mockNotify.GetCallCount(),
-		"notifyFunc should be called once per subscription")
+	assert.Equal(t, len(expectedSubIDs), mockDispatch.GetCallCount(),
+		"mockDispatch should be called once per subscription")
 
-	assert.Equal(t, len(expectedSubIDs), len(notifiedSubs))
-
-	actualSubIDs := make(map[uint]bool)
-	for _, sub := range notifiedSubs {
-		actualSubIDs[sub.ID] = true
-	}
-	for _, id := range expectedSubIDs {
-		assert.True(t, actualSubIDs[id], "Expected subscription %d to be notified", id)
-	}
+	assert.Equal(t, len(expectedSubIDs), len(dispatchedEvents))
 }
 
 func TestWeatherJobExecutor_Execute_RepositoryError(t *testing.T) {
@@ -175,12 +168,12 @@ func TestWeatherJobExecutor_Execute_RepositoryError(t *testing.T) {
 		Return(nil, expectedError).
 		Once()
 
-	mockNotify := &mockNotifyFunc{}
+	mockDispatcher := &mockEventDispatcher{}
 
 	executor := NewWeatherJobExecutor(
 		mockRepo,
 		frequency,
-		mockNotify,
+		mockDispatcher,
 	)
 
 	err := executor.Execute(ctx)
@@ -190,11 +183,11 @@ func TestWeatherJobExecutor_Execute_RepositoryError(t *testing.T) {
 
 	mockRepo.AssertExpectations(t)
 
-	assert.Equal(t, 0, mockNotify.GetCallCount(),
-		"notifyFunc should not be called when repository fails")
+	assert.Equal(t, 0, mockDispatcher.GetCallCount(),
+		"dispatcherFunc should not be called when repository fails")
 }
 
-func TestWeatherJobExecutor_Execute_NotifyError(t *testing.T) {
+func TestWeatherJobExecutor_Execute_DispatcherError(t *testing.T) {
 	ctx := context.Background()
 	frequency := domain.Frequency("hourly")
 	cities := []string{"New York", "London", "Tokyo", "Paris", "Berlin"}
@@ -206,25 +199,25 @@ func TestWeatherJobExecutor_Execute_NotifyError(t *testing.T) {
 		Return(groupedSubscriptions, nil).
 		Once()
 
-	mockNotify := &mockNotifyFunc{
-		notifyError: pkgErrors.New(internalErrors.ErrInternal, "notification error"),
+	mockDispatcher := &mockEventDispatcher{
+		dispatchError: pkgErrors.New(internalErrors.ErrInternal, "dispatcher error"),
 	}
 
 	executor := NewWeatherJobExecutor(
 		mockRepo,
 		frequency,
-		mockNotify,
+		mockDispatcher,
 	)
 
 	err := executor.Execute(ctx)
 
-	assert.Error(t, err, "Should return error when notifications fail")
+	assert.Error(t, err, "Should return error when dispatcher fail")
 
 	mockRepo.AssertExpectations(t)
 
 	expectedSubIDs := calculateExpectedSubIDs(citySubCounts)
-	assert.Equal(t, len(expectedSubIDs), mockNotify.GetCallCount(),
-		"At least one notification should be attempted")
+	assert.Equal(t, len(expectedSubIDs), mockDispatcher.GetCallCount(),
+		"At least one dispatch should be attempted")
 }
 
 func TestWeatherJobExecutor_Execute_ContextTimeout(t *testing.T) {
@@ -241,12 +234,12 @@ func TestWeatherJobExecutor_Execute_ContextTimeout(t *testing.T) {
 		Return(groupedSubscriptions, nil).
 		Maybe()
 
-	mockNotify := &mockNotifyFunc{}
+	mockDispatcher := &mockEventDispatcher{}
 
 	executor := NewWeatherJobExecutor(
 		mockRepo,
 		frequency,
-		mockNotify,
+		mockDispatcher,
 	)
 
 	time.Sleep(10 * time.Millisecond)

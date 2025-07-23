@@ -1,0 +1,2 @@
+CREATE DATABASE weather;
+CREATE DATABASE notification;
