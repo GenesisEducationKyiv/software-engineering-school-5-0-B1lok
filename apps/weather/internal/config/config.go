@@ -17,12 +17,13 @@ const (
 )
 
 type Config struct {
-	Server       ServerConfig  `config:"server"`
-	Weather      WeatherConfig `config:"weather"`
-	OpenMeteoURL string        `config:"open_meteo_url"`
-	GeoCodingURL string        `config:"geo_coding_url"`
-	Redis        RedisConfig   `config:"redis"`
-	MetricsPort  string        `config:"metrics_port"`
+	Server       ServerConfig     `config:"server"`
+	Weather      WeatherConfig    `config:"weather"`
+	OpenMeteoURL string           `config:"open_meteo_url"`
+	GeoCodingURL string           `config:"geo_coding_url"`
+	Redis        RedisConfig      `config:"redis"`
+	MetricsPort  string           `config:"metrics_port"`
+	LogSampling  LogSamplingRates `config:"log_sampling"`
 }
 
 type ServerConfig struct {
@@ -39,6 +40,15 @@ type RedisConfig struct {
 	Address  string `config:"address"`
 	Password string `config:"password"`
 	DB       int    `config:"db"`
+}
+
+type LogSamplingRates struct {
+	Enabled bool    `config:"enabled"`
+	Trace   float64 `config:"trace"`
+	Debug   float64 `config:"debug"`
+	Info    float64 `config:"info"`
+	Warn    float64 `config:"warn"`
+	Error   float64 `config:"error"`
 }
 
 func LoadConfig() (Config, error) {

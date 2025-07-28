@@ -18,11 +18,12 @@ const (
 )
 
 type Config struct {
-	DB               DBConfig     `config:"db"`
-	Server           ServerConfig `config:"server"`
-	ValidatorAddress string       `config:"validator_address"`
-	RabbitMqURL      string       `config:"rabbitmq_url"`
-	MetricsPort      string       `config:"metrics_port"`
+	DB               DBConfig         `config:"db"`
+	Server           ServerConfig     `config:"server"`
+	ValidatorAddress string           `config:"validator_address"`
+	RabbitMqURL      string           `config:"rabbitmq_url"`
+	MetricsPort      string           `config:"metrics_port"`
+	LogSampling      LogSamplingRates `config:"log_sampling"`
 }
 
 type DBConfig struct {
@@ -37,6 +38,15 @@ type ServerConfig struct {
 	Host     string `config:"host"`
 	HttpPort string `config:"http_port"`
 	GrpcPort string `config:"grpc_port"`
+}
+
+type LogSamplingRates struct {
+	Enabled bool    `config:"enabled"`
+	Trace   float64 `config:"trace"`
+	Debug   float64 `config:"debug"`
+	Info    float64 `config:"info"`
+	Warn    float64 `config:"warn"`
+	Error   float64 `config:"error"`
 }
 
 func LoadConfig() (Config, error) {

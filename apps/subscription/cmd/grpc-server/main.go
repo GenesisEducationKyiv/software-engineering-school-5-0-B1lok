@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"subscription-service/pkg/logger"
+
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"subscription-service/internal/infrastructure/prometheus"
@@ -47,6 +49,7 @@ func main() {
 //nolint:gocyclo
 func run() error {
 	cfg, err := config.LoadConfig()
+	logger.Configure(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}

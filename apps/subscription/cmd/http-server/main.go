@@ -7,6 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"subscription-service/pkg/logger"
+
 	"subscription-service/internal/infrastructure/prometheus"
 
 	"github.com/rs/zerolog/log"
@@ -40,6 +42,7 @@ func main() {
 //nolint:gocyclo
 func run() error {
 	cfg, err := config.LoadConfig()
+	logger.Configure(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}

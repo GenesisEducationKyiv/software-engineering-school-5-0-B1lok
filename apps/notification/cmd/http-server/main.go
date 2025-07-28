@@ -7,6 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"notification/pkg/logger"
+
 	"github.com/rs/zerolog/log"
 
 	"notification/internal/infrastructure/postgres"
@@ -38,6 +40,7 @@ func main() {
 //nolint:gocyclo
 func run() error {
 	cfg, err := config.LoadConfig()
+	logger.Configure(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}

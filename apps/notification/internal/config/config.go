@@ -17,11 +17,12 @@ const (
 )
 
 type Config struct {
-	DB                 DBConfig    `config:"db"`
-	Email              EmailConfig `config:"email"`
-	ServerPort         string      `config:"server_port"`
-	RabbitMqURL        string      `config:"rabbitmq_url"`
-	WeatherServiceAddr string      `config:"weather_service"`
+	DB                 DBConfig         `config:"db"`
+	Email              EmailConfig      `config:"email"`
+	ServerPort         string           `config:"server_port"`
+	RabbitMqURL        string           `config:"rabbitmq_url"`
+	WeatherServiceAddr string           `config:"weather_service"`
+	LogSampling        LogSamplingRates `config:"log_sampling"`
 }
 
 type EmailConfig struct {
@@ -38,6 +39,15 @@ type DBConfig struct {
 	User     string `config:"user"`
 	Password string `config:"password"`
 	Name     string `config:"name"`
+}
+
+type LogSamplingRates struct {
+	Enabled bool    `config:"enabled"`
+	Trace   float64 `config:"trace"`
+	Debug   float64 `config:"debug"`
+	Info    float64 `config:"info"`
+	Warn    float64 `config:"warn"`
+	Error   float64 `config:"error"`
 }
 
 func LoadConfig() (Config, error) {
