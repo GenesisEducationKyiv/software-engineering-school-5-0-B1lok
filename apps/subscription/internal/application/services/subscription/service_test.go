@@ -315,6 +315,7 @@ func TestSubscriptionService_Confirm_Success(t *testing.T) {
 	}
 
 	mockRepo.On("FindByToken", ctx, token).Return(subscription, nil)
+	mockRecorder.On("IncActiveSubscriptions").Return()
 
 	updatedSubscription := &domain.Subscription{
 		ID:        1,
@@ -346,6 +347,7 @@ func TestSubscriptionService_Confirm_TokenNotFound(t *testing.T) {
 	token := "invalid-token"
 
 	mockRepo.On("FindByToken", ctx, token).Return(nil, nil)
+	mockRecorder.On("IncActiveSubscriptions").Return()
 
 	err := service.Confirm(ctx, token)
 
@@ -372,6 +374,7 @@ func TestSubscriptionService_Confirm_RepositoryError(t *testing.T) {
 
 	repoErr := errors.New(internalErrors.ErrInternal, "Database error")
 	mockRepo.On("FindByToken", ctx, token).Return(nil, repoErr)
+	mockRecorder.On("IncActiveSubscriptions").Return()
 
 	err := service.Confirm(ctx, token)
 
@@ -409,6 +412,7 @@ func TestSubscriptionService_Confirm_UpdateError(t *testing.T) {
 
 	updateErr := errors.New(internalErrors.ErrInternal, "Update failed")
 	mockRepo.On("Update", ctx, mock.AnythingOfType("*domain.Subscription")).Return(nil, updateErr)
+	mockRecorder.On("IncActiveSubscriptions").Return()
 
 	err := service.Confirm(ctx, token)
 
@@ -443,6 +447,7 @@ func TestSubscriptionService_Unsubscribe_Success(t *testing.T) {
 
 	mockRepo.On("FindByToken", ctx, token).Return(subscription, nil)
 	mockRepo.On("Delete", ctx, uint(1)).Return(nil)
+	mockRecorder.On("DecActiveSubscriptions").Return()
 
 	err := service.Unsubscribe(ctx, token)
 
@@ -462,6 +467,7 @@ func TestSubscriptionService_Unsubscribe_TokenNotFound(t *testing.T) {
 	token := "invalid-token"
 
 	mockRepo.On("FindByToken", ctx, token).Return(nil, nil)
+	mockRecorder.On("DecActiveSubscriptions").Return()
 
 	err := service.Unsubscribe(ctx, token)
 
@@ -488,6 +494,7 @@ func TestSubscriptionService_Unsubscribe_RepositoryError(t *testing.T) {
 
 	repoErr := errors.New(internalErrors.ErrInternal, "Database error")
 	mockRepo.On("FindByToken", ctx, token).Return(nil, repoErr)
+	mockRecorder.On("DecActiveSubscriptions").Return()
 
 	err := service.Unsubscribe(ctx, token)
 
@@ -523,8 +530,9 @@ func TestSubscriptionService_Unsubscribe_DeleteError(t *testing.T) {
 
 	mockRepo.On("FindByToken", ctx, token).Return(subscription, nil)
 
-	deleteErr := errors.New(internalErrors.ErrInternal, "Delete failed")
+	deleteErr := errors.New(internalErrors.ErrInternal, "Failed to delete subscription")
 	mockRepo.On("Delete", ctx, uint(1)).Return(deleteErr)
+	mockRecorder.On("DecActiveSubscriptions").Return()
 
 	err := service.Unsubscribe(ctx, token)
 
