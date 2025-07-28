@@ -22,6 +22,7 @@ type Config struct {
 	Server           ServerConfig `config:"server"`
 	ValidatorAddress string       `config:"validator_address"`
 	RabbitMqURL      string       `config:"rabbitmq_url"`
+	MetricsPort      string       `config:"metrics_port"`
 }
 
 type DBConfig struct {

@@ -12,8 +12,14 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  - job_name: 'app'
+  - job_name: 'weather-microservice'
     scrape_interval: 5s
     static_configs:
       - targets: ['weather-service:8000']
+    metrics_path: '/metrics'
+
+  - job_name: 'subscription-microservice'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['subscription-service:8000']
     metrics_path: '/metrics'

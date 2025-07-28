@@ -24,6 +24,7 @@ import (
 	rbevent "subscription-service/internal/infrastructure/rabbitmq/event"
 	"subscription-service/internal/interface/rest"
 	"subscription-service/internal/test/containers"
+	"subscription-service/internal/test/mocks"
 	"subscription-service/internal/test/stubs"
 	"subscription-service/pkg/middleware"
 	"testing"
@@ -69,13 +70,14 @@ func (suite *SubscriptionControllerTestSuite) SetupSuite() {
 	appPostgres.RunMigrationsWithPath(cfg, getMigrationPath())
 
 	cityValidator := stubs.NewCityValidatorStub()
+	mockRecorder := new(mocks.MockMetrics)
 	outboxRepo := outbox.NewOutboxRepository(db)
 	dispatcher := event.NewDispatcher()
 	dispatcher.Register(pgevent.NewUserSubscribedHandler(serverHost, outboxRepo))
 	dispatcher.Register(rbevent.NewWeatherUpdateHandler(serverHost, stubs.NewPublisherStub()))
 	subscriptionRepo := pgsubscription.NewRepository(db)
 	subscriptionService := subscription.NewService(
-		subscriptionRepo, cityValidator, dispatcher,
+		subscriptionRepo, cityValidator, dispatcher, mockRecorder,
 	)
 	subscriptionController := rest.NewSubscriptionController(subscriptionService)
 	txManager := middleware.NewTxManager(db)

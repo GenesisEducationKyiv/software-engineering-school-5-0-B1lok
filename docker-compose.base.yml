@@ -5,6 +5,7 @@ services:
       dockerfile: apps/subscription/Dockerfile
       target: final
     ports:
+      - "8001:8000"
       - "50052:50052"
     depends_on:
       postgres:

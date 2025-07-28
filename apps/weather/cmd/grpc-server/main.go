@@ -169,12 +169,6 @@ func run() error {
 		}
 	}()
 
-	go func() {
-		<-ctx.Done()
-		log.Info().Msg("Shutting down gRPC server...")
-		s.GracefulStop()
-	}()
-
 	select {
 	case <-ctx.Done():
 		log.Info().Msg("Shutdown initiated...")

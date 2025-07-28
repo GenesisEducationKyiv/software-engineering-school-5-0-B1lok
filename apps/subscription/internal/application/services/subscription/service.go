@@ -28,19 +28,26 @@ type CityValidator interface {
 	Validate(ctx context.Context, city string) (*string, error)
 }
 
+type Recorder interface {
+	IncActiveSubscriptions()
+	DecActiveSubscriptions()
+}
+
 type Service struct {
 	repository Repository
 	validator  CityValidator
 	dispatcher EventDispatcher
+	recorder   Recorder
 }
 
 func NewService(
 	repository Repository,
 	validator CityValidator,
 	dispatcher EventDispatcher,
+	recorder Recorder,
 ) *Service {
 	return &Service{
-		repository: repository, validator: validator, dispatcher: dispatcher,
+		repository: repository, validator: validator, dispatcher: dispatcher, recorder: recorder,
 	}
 }
 
@@ -91,6 +98,9 @@ func (s *Service) Confirm(ctx context.Context, token string) error {
 	if err != nil {
 		return err
 	}
+
+	s.recorder.IncActiveSubscriptions()
+
 	return err
 }
 
@@ -104,7 +114,14 @@ func (s *Service) Unsubscribe(ctx context.Context, token string) error {
 		return pkgErrors.New(internalErrors.ErrNotFound, "Token not found")
 	}
 
-	return s.repository.Delete(ctx, sub.ID)
+	err = s.repository.Delete(ctx, sub.ID)
+	if err != nil {
+		return pkgErrors.New(internalErrors.ErrInternal, "Failed to delete subscription")
+	}
+
+	s.recorder.DecActiveSubscriptions()
+
+	return nil
 }
 
 func (s *Service) setValidatedCity(
