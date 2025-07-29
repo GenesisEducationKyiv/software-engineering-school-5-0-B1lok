@@ -179,6 +179,12 @@ Application Performance Alerts
 
 *   **Rationale**: Weather subscription services rely heavily on database operations for subscription tracking. Connection pool exhaustion can cause service unavailability.
 
+---------------------------------
+
+*   **Threshold**: Average database response time > 100ms over a 5-minute window
+
+*   **Rationale**: Consistently high database latency can indicate performance bottlenecks or infrastructure issues. This can degrade user experience and delay critical operations like subscription processing and message delivery.
+
 Log Retention Policy by Log Level
 ---------------------------------
 
@@ -256,3 +262,46 @@ Storage Strategy
 *   **Access Time**: 1-5 minutes retrieval time
 
 *   **Cost**: Lower storage cost, optimized for long-term retention
+
+Log Access by Role
+------------------
+
+### TRACE Logs
+*   **Who can access**: Developers, DevOps engineers
+*   **Restrictions**: Development environment only
+*   **Audit**: All access attempts logged
+
+### DEBUG Logs
+*   **Who can access**: Developers, QA, L2+ support
+*   **Restrictions**: Business hours only (except incidents)
+*   **Audit**: Access time and search queries logged
+
+### INFO Logs
+*   **Who can access**: All tech staff, product managers, analysts
+*   **Restrictions**: Support sees anonymized data only
+*   **Audit**: Basic access logging
+
+### WARN Logs
+*   **Who can access**: Tech staff, operations, management
+*   **Restrictions**: Management gets summary reports only
+*   **Audit**: Detailed logging for technical access
+
+### ERROR Logs
+*   **Who can access**: All tech roles, management, legal (on request)
+*   **Restrictions**: Legal needs approval
+*   **Audit**: Full audit with access reason
+
+Log Access Audit
+-----------------
+
+### What we track
+*   Who accessed (user, role, IP address)
+*   When and what they viewed
+*   Search queries used
+*   Data exported
+
+### Audit storage
+*   **Retention**: 2 years
+*   **Location**: Separate secure database
+*   **Reports**: Monthly automated reports
+*   **Alerts**: For suspicious activity
