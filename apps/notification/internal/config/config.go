@@ -52,7 +52,7 @@ type LogSamplingRates struct {
 
 func LoadConfig() (Config, error) {
 	if err := loadEnvFile(defaultEnvFile); err != nil {
-		log.Warn().Err(err).Msg("warning: failed to load .env file")
+		log.Warn().Err(err).Msg("failed to load .env file")
 	}
 
 	var config Config

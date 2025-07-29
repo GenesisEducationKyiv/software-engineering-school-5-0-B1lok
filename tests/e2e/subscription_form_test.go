@@ -17,11 +17,11 @@ func TestSuccessfulSubscription(t *testing.T) {
 	pw, err := playwright.Run()
 
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not start Playwright")
+		log.Fatal().Err(err).Msg("starting Playwright")
 	}
 	defer func() {
 		if err := pw.Stop(); err != nil {
-			log.Fatal().Err(err).Msg("could not stop Playwright")
+			log.Fatal().Err(err).Msg("stopping Playwright")
 		}
 	}()
 
@@ -31,21 +31,21 @@ func TestSuccessfulSubscription(t *testing.T) {
 				Headless: playwright.Bool(true),
 			})
 			if err != nil {
-				t.Fatalf("could not launch browser %s: %v", browserData.name, err)
+				t.Fatalf("launching browser %s: %v", browserData.name, err)
 			}
 			defer func() {
 				if err := browser.Close(); err != nil {
-					log.Fatal().Err(err).Msg("could not close browser")
+					log.Fatal().Err(err).Msg("closing browser")
 				}
 			}()
 
 			page, err := browser.NewPage()
 			if err != nil {
-				t.Fatalf("could not create page: %v", err)
+				t.Fatalf("creating page: %v", err)
 			}
 			defer func() {
 				if err := browser.Close(); err != nil {
-					log.Fatal().Err(err).Msg("could not close browser")
+					log.Fatal().Err(err).Msg("closing browser")
 				}
 			}()
 
@@ -109,7 +109,7 @@ func TestFormValidationDetailed(t *testing.T) {
 	}
 	defer func() {
 		if err := pw.Stop(); err != nil {
-			log.Fatal().Err(err).Msg("could not stop Playwright")
+			log.Fatal().Err(err).Msg("stopping Playwright")
 		}
 	}()
 
@@ -123,7 +123,7 @@ func TestFormValidationDetailed(t *testing.T) {
 			}
 			defer func() {
 				if err := browser.Close(); err != nil {
-					log.Fatal().Err(err).Msg("could not close browser")
+					log.Fatal().Err(err).Msg("closing browser")
 				}
 			}()
 
@@ -133,7 +133,7 @@ func TestFormValidationDetailed(t *testing.T) {
 			}
 			defer func() {
 				if err := browser.Close(); err != nil {
-					log.Fatal().Err(err).Msg("could not close browser")
+					log.Fatal().Err(err).Msg("closing browser")
 				}
 			}()
 
@@ -167,11 +167,11 @@ func TestInvalidCityInput(t *testing.T) {
 
 	pw, err := playwright.Run()
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not start Playwright")
+		log.Fatal().Err(err).Msg("starting Playwright")
 	}
 	defer func() {
 		if err := pw.Stop(); err != nil {
-			log.Fatal().Err(err).Msg("could not stop Playwright")
+			log.Fatal().Err(err).Msg("stopping Playwright")
 		}
 	}()
 
@@ -185,7 +185,7 @@ func TestInvalidCityInput(t *testing.T) {
 			}
 			defer func() {
 				if err := browser.Close(); err != nil {
-					log.Fatal().Err(err).Msg("could not close browser")
+					log.Fatal().Err(err).Msg("closing browser")
 				}
 			}()
 
@@ -195,7 +195,7 @@ func TestInvalidCityInput(t *testing.T) {
 			}
 			defer func() {
 				if err := browser.Close(); err != nil {
-					log.Fatal().Err(err).Msg("could not close browser")
+					log.Fatal().Err(err).Msg("closing browser")
 				}
 			}()
 

@@ -18,14 +18,8 @@ func MapGrpcErrorToDomain(err error) error {
 	}
 
 	if st.Code() == codes.InvalidArgument {
-		for _, detail := range st.Details() {
-			if info, ok := detail.(*errdetails.BadRequest); ok {
-				for _, violation := range info.FieldViolations {
-					if violation.Field == "city" {
-						return pkgErrors.New(internalErrors.ErrInvalidInput, violation.Description)
-					}
-				}
-			}
+		if validationErr := extractFieldViolationError(st); validationErr != nil {
+			return validationErr
 		}
 	}
 
@@ -41,4 +35,17 @@ func MapGrpcErrorToDomain(err error) error {
 	}
 
 	return pkgErrors.New(mappedError, st.Message())
+}
+
+func extractFieldViolationError(st *status.Status) error {
+	for _, detail := range st.Details() {
+		if info, ok := detail.(*errdetails.BadRequest); ok {
+			for _, violation := range info.FieldViolations {
+				if violation.Field == "city" {
+					return pkgErrors.New(internalErrors.ErrInvalidInput, violation.Description)
+				}
+			}
+		}
+	}
+	return nil
 }

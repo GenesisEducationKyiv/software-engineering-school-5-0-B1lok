@@ -14,7 +14,7 @@ import (
 )
 
 type Saver interface {
-	SaveMessageId(ctx context.Context, messageId string) error
+	SaveMessageID(ctx context.Context, messageId string) error
 }
 
 type IdempotentConsumer struct {
@@ -48,7 +48,7 @@ func (c *IdempotentConsumer) Consume(ctx context.Context, handler event.Handler)
 	)
 	if err != nil {
 		return fmt.Errorf(
-			"failed to register consumer for queue %s: %c", handler.GetName(), err,
+			"failed to register consumer for queue %s: %w", handler.GetName(), err,
 		)
 	}
 
@@ -65,7 +65,7 @@ func (c *IdempotentConsumer) Consume(ctx context.Context, handler event.Handler)
 					return nack(msg)
 				}
 
-				if err := c.saver.SaveMessageId(txCtx, messageId); err != nil {
+				if err := c.saver.SaveMessageID(txCtx, messageId); err != nil {
 					return fmt.Errorf("failed to save message_id: %w", err)
 				}
 

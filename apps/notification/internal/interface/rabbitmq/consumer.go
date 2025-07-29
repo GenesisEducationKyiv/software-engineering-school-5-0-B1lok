@@ -34,7 +34,7 @@ func (c *Consumer) Consume(ctx context.Context, handler event.Handler) error {
 	)
 	if err != nil {
 		return fmt.Errorf(
-			"failed to register consumer for queue %s: %c", handler.GetName(), err,
+			"failed to register consumer for queue %s: %w", handler.GetName(), err,
 		)
 	}
 

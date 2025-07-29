@@ -273,7 +273,7 @@ func TestSubscriptionControllerTestSuite(t *testing.T) {
 func getMigrationPath() string {
 	workingDir, err := os.Getwd()
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not get working directory")
+		log.Fatal().Err(err).Msg("getting working directory")
 	}
 	projectRoot := filepath.Join(workingDir, "../../..")
 	migrationsPath := filepath.Join(projectRoot, "migrations")

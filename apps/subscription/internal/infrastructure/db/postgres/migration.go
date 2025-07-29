@@ -18,12 +18,12 @@ func RunMigrations(cfg config.DBConfig) {
 
 	m, err := migrate.New("file://migrations", connectionString)
 	if err != nil {
-		log.Error().Err(err).Msgf("Could not connect to migrations")
+		log.Error().Err(err).Msgf("connecting to migrations")
 		return
 	}
 
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		log.Error().Err(err).Msgf("Could not run migrations")
+		log.Error().Err(err).Msgf("running migrations")
 	}
 }
 
@@ -33,11 +33,11 @@ func RunMigrationsWithPath(cfg config.DBConfig, migrationPath string) {
 
 	m, err := migrate.New(migrationPath, connectionString)
 	if err != nil {
-		log.Error().Err(err).Msgf("Could not connect to migrations")
+		log.Error().Err(err).Msgf("connecting to migrations")
 		return
 	}
 
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		log.Error().Err(err).Msgf("Could not run migrations")
+		log.Error().Err(err).Msgf("running migrations")
 	}
 }
