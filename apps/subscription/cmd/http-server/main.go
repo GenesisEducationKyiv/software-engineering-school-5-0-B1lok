@@ -110,6 +110,8 @@ func run() error {
 		cancel()
 		return fmt.Errorf("failed to create RabbitMQ publisher: %w", err)
 	}
+	defer publisher.Close()
+
 	dispatcher := event.NewDispatcher()
 	dispatcher.Register(pgevent.NewUserSubscribedHandler(cfg.Server.Host, outboxRepo))
 	dispatcher.Register(rbevent.NewWeatherUpdateHandler(cfg.Server.Host, publisher))

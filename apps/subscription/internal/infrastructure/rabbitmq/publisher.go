@@ -123,3 +123,7 @@ func (p *Publisher) PublishWithHeaders(
 		return ctx.Err()
 	}
 }
+
+func (p *Publisher) Close() {
+	close(p.requests)
+}
