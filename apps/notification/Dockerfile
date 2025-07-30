@@ -15,7 +15,7 @@ ARG TARGETARCH
 RUN --mount=type=cache,target=/go/pkg/mod/ \
     cd apps/notification && CGO_ENABLED=0 GOARCH=$TARGETARCH go build -o /bin/server ./cmd/http-server
 
-FROM alpine:latest AS final
+FROM alpine:3.21 AS final
 
 COPY apps/notification/templates /templates
 COPY apps/notification/migrations /migrations
