@@ -24,7 +24,6 @@ import (
 	"subscription-service/internal/infrastructure/db/postgres/outbox/relay"
 	pgsubscription "subscription-service/internal/infrastructure/db/postgres/subscription"
 
-	_ "github.com/B1lok/proto-contracts"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"google.golang.org/grpc"

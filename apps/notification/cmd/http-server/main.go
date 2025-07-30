@@ -23,7 +23,6 @@ import (
 	"notification/internal/interface/rabbitmq"
 	"notification/pkg"
 
-	_ "github.com/B1lok/proto-contracts"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

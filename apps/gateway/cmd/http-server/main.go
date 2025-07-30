@@ -9,7 +9,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	_ "github.com/B1lok/proto-contracts"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

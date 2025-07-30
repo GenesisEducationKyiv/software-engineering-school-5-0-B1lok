@@ -12,7 +12,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	_ "github.com/B1lok/proto-contracts"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 

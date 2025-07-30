@@ -24,6 +24,7 @@ type Config struct {
 	RabbitMqURL      string           `config:"rabbitmq_url"`
 	MetricsPort      string           `config:"metrics_port"`
 	LogSampling      LogSamplingRates `config:"log_sampling"`
+	LokiHost         string           `config:"loki_host"`
 }
 
 type DBConfig struct {

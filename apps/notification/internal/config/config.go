@@ -23,6 +23,7 @@ type Config struct {
 	RabbitMqURL        string           `config:"rabbitmq_url"`
 	WeatherServiceAddr string           `config:"weather_service"`
 	LogSampling        LogSamplingRates `config:"log_sampling"`
+	LokiHost           string           `config:"loki_host"`
 }
 
 type EmailConfig struct {

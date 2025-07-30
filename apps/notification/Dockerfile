@@ -3,7 +3,7 @@ FROM --platform=$BUILDPLATFORM golang:${GO_VERSION} AS build
 WORKDIR /src
 
 COPY apps/notification/go.mod apps/notification/go.sum ./apps/notification/
-COPY proto-contracts/ ./proto-contracts/
+COPY pkg/ ./pkg/
 
 RUN --mount=type=cache,target=/go/pkg/mod/ \
     cd apps/notification && go mod download -x

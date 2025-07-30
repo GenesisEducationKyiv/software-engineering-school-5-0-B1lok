@@ -1,7 +1,10 @@
 package logger
 
 import (
+	"common/logger"
+	"io"
 	"os"
+	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -9,8 +12,26 @@ import (
 	"subscription-service/internal/config"
 )
 
+var labels = map[string]string{
+	"job": "subscription-service",
+}
+
 func Configure(cfg config.Config) {
-	log.Logger = zerolog.New(os.Stdout).
+	consoleWriter := zerolog.ConsoleWriter{
+		Out:        os.Stdout,
+		TimeFormat: time.RFC3339,
+		NoColor:    false,
+	}
+
+	var writers []io.Writer
+	writers = append(writers, consoleWriter)
+
+	lokiWriter := logger.NewLokiWriter(cfg.LokiHost, labels, func(err error) {
+		log.Printf("Loki error: %v", err)
+	})
+	writers = append(writers, lokiWriter)
+
+	log.Logger = zerolog.New(zerolog.MultiLevelWriter(writers...)).
 		With().
 		Timestamp().
 		Logger()

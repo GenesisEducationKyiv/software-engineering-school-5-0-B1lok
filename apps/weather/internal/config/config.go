@@ -24,6 +24,7 @@ type Config struct {
 	Redis        RedisConfig      `config:"redis"`
 	MetricsPort  string           `config:"metrics_port"`
 	LogSampling  LogSamplingRates `config:"log_sampling"`
+	LokiHost     string           `config:"loki_host"`
 }
 
 type ServerConfig struct {

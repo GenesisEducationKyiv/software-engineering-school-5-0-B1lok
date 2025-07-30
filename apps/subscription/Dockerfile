@@ -3,7 +3,7 @@ FROM --platform=$BUILDPLATFORM golang:${GO_VERSION} AS build
 WORKDIR /src
 
 COPY apps/subscription/go.mod apps/subscription/go.sum ./apps/subscription/
-COPY proto-contracts/ ./proto-contracts/
+COPY pkg/ ./pkg/
 
 RUN --mount=type=cache,target=/go/pkg/mod/ \
     cd apps/subscription && go mod download -x

@@ -3,7 +3,6 @@ FROM --platform=$BUILDPLATFORM golang:${GO_VERSION} AS build
 WORKDIR /src
 
 COPY apps/gateway/go.mod apps/gateway/go.sum ./apps/gateway/
-COPY proto-contracts/ ./proto-contracts/
 
 RUN --mount=type=cache,target=/go/pkg/mod/ \
     cd apps/gateway && go mod download -x
