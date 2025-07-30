@@ -15,7 +15,7 @@ ARG TARGETARCH
 RUN --mount=type=cache,target=/go/pkg/mod/ \
     cd apps/subscription && CGO_ENABLED=0 GOARCH=$TARGETARCH go build -o /bin/server ./cmd/grpc-server
 
-FROM alpine:3.21 AS final
+FROM alpine:3.19 AS final
 
 COPY apps/subscription/templates /templates
 COPY apps/subscription/migrations /migrations
