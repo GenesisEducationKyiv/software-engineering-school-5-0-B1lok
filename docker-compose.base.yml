@@ -105,7 +105,7 @@ services:
         retries: 5
   loki:
     image: grafana/loki:latest
-    user: "10001:0"
+    user: "0"
     ports:
       - "3100:3100"
     volumes:
