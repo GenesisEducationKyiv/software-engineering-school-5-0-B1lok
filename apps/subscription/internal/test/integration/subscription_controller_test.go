@@ -69,13 +69,14 @@ func (suite *SubscriptionControllerTestSuite) SetupSuite() {
 	appPostgres.RunMigrationsWithPath(cfg, getMigrationPath())
 
 	cityValidator := stubs.NewCityValidatorStub()
+	recorder := stubs.NewRecorderStub()
 	outboxRepo := outbox.NewOutboxRepository(db)
 	dispatcher := event.NewDispatcher()
 	dispatcher.Register(pgevent.NewUserSubscribedHandler(serverHost, outboxRepo))
 	dispatcher.Register(rbevent.NewWeatherUpdateHandler(serverHost, stubs.NewPublisherStub()))
 	subscriptionRepo := pgsubscription.NewRepository(db)
 	subscriptionService := subscription.NewService(
-		subscriptionRepo, cityValidator, dispatcher,
+		subscriptionRepo, cityValidator, dispatcher, recorder,
 	)
 	subscriptionController := rest.NewSubscriptionController(subscriptionService)
 	txManager := middleware.NewTxManager(db)
@@ -272,7 +273,7 @@ func TestSubscriptionControllerTestSuite(t *testing.T) {
 func getMigrationPath() string {
 	workingDir, err := os.Getwd()
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not get working directory")
+		log.Fatal().Err(err).Msg("getting working directory")
 	}
 	projectRoot := filepath.Join(workingDir, "../../..")
 	migrationsPath := filepath.Join(projectRoot, "migrations")

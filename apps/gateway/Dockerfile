@@ -3,7 +3,6 @@ FROM --platform=$BUILDPLATFORM golang:${GO_VERSION} AS build
 WORKDIR /src
 
 COPY apps/gateway/go.mod apps/gateway/go.sum ./apps/gateway/
-COPY proto-contracts/ ./proto-contracts/
 
 RUN --mount=type=cache,target=/go/pkg/mod/ \
     cd apps/gateway && go mod download -x
@@ -15,7 +14,7 @@ ARG TARGETARCH
 RUN --mount=type=cache,target=/go/pkg/mod/ \
     cd apps/gateway && CGO_ENABLED=0 GOARCH=$TARGETARCH go build -o /bin/server ./cmd/http-server
 
-FROM alpine:latest AS final
+FROM alpine:3.19 AS final
 
 COPY apps/gateway/templates /templates
 

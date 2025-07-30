@@ -19,7 +19,7 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 	}
 }
 
-func (r Repository) SaveMessageId(ctx context.Context, messageId string) error {
+func (r Repository) SaveMessageID(ctx context.Context, messageId string) error {
 	tx, ok := pkg.GetTx(ctx)
 	if !ok {
 		return errors.New("no transaction found in context")

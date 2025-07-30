@@ -4,6 +4,7 @@ app.exe
 postgres-data
 logs
 redis-data
+loki-data
 monitoring/prometheus/prometheus-data
 monitoring/grafana/grafana-data
 rabbitmq-data

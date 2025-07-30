@@ -38,7 +38,11 @@ func GrpcErrorInterceptor() grpc.UnaryServerInterceptor {
 						},
 					},
 				}
-				st, _ = st.WithDetails(badReq)
+				stWithDetails, err := st.WithDetails(badReq)
+				if err != nil {
+					return nil, st.Err()
+				}
+				return nil, stWithDetails.Err()
 			}
 
 			return nil, st.Err()

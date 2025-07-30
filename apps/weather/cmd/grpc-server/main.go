@@ -12,7 +12,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	_ "github.com/B1lok/proto-contracts"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 
@@ -45,6 +44,7 @@ func main() {
 //nolint:gocyclo
 func run() error {
 	cfg, err := config.LoadConfig()
+	logger.Configure(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
@@ -167,12 +167,6 @@ func run() error {
 		if err := metricsServer.ListenAndServe(); err != nil {
 			httpErrChan <- err
 		}
-	}()
-
-	go func() {
-		<-ctx.Done()
-		log.Info().Msg("Shutting down gRPC server...")
-		s.GracefulStop()
 	}()
 
 	select {

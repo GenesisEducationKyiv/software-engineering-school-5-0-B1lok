@@ -3,7 +3,7 @@ module notification
 go 1.24.3
 
 require (
-	github.com/B1lok/proto-contracts v0.0.0
+	common v0.0.0
 	github.com/docker/go-connections v0.5.0
 	github.com/envoyproxy/protoc-gen-validate v1.2.1
 	github.com/gin-gonic/gin v1.10.1
@@ -23,7 +23,7 @@ require (
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 )
 
-replace github.com/B1lok/proto-contracts => ../../proto-contracts
+replace common => ../../pkg
 
 require (
 	dario.cat/mergo v1.0.1 // indirect

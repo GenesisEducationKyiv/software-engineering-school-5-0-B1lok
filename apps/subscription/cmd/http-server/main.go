@@ -7,6 +7,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	"subscription-service/pkg/logger"
+
+	"subscription-service/internal/infrastructure/prometheus"
+
 	"github.com/rs/zerolog/log"
 
 	"subscription-service/internal/application/event"
@@ -38,6 +42,7 @@ func main() {
 //nolint:gocyclo
 func run() error {
 	cfg, err := config.LoadConfig()
+	logger.Configure(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
@@ -53,6 +58,7 @@ func run() error {
 
 	// Initialize infrastructure components
 	txManager := middleware.NewTxManager(db)
+	appMetrics := prometheus.NewAppMetrics()
 	validationClient, conn, err := validator.NewClient(cfg.ValidatorAddress)
 	if err != nil {
 		cancel()
@@ -104,11 +110,13 @@ func run() error {
 		cancel()
 		return fmt.Errorf("failed to create RabbitMQ publisher: %w", err)
 	}
+	defer publisher.Close()
+
 	dispatcher := event.NewDispatcher()
 	dispatcher.Register(pgevent.NewUserSubscribedHandler(cfg.Server.Host, outboxRepo))
 	dispatcher.Register(rbevent.NewWeatherUpdateHandler(cfg.Server.Host, publisher))
 	subscriptionService := subscription.NewService(
-		subscriptionRepo, cityValidator, dispatcher)
+		subscriptionRepo, cityValidator, dispatcher, appMetrics)
 
 	// Initialize controllers
 	subscriptionController := rest.NewSubscriptionController(subscriptionService)

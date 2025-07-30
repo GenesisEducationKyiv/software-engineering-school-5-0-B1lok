@@ -5,6 +5,7 @@ services:
       dockerfile: apps/subscription/Dockerfile
       target: final
     ports:
+      - "8001:8000"
       - "50052:50052"
     depends_on:
       postgres:
@@ -13,8 +14,15 @@ services:
         condition: service_healthy
       weather-service:
         condition: service_healthy
+      loki:
+        condition: service_healthy
     networks:
       - app-network
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/metrics" ]
+      interval: 5s
+      timeout: 10s
+      retries: 5
   weather-service:
     build:
       context: .
@@ -27,6 +35,8 @@ services:
       - ./logs:/logs
     depends_on:
       redis:
+        condition: service_healthy
+      loki:
         condition: service_healthy
     networks:
       - app-network
@@ -54,6 +64,10 @@ services:
       target: final
     depends_on:
       rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      loki:
         condition: service_healthy
     networks:
       - app-network
@@ -89,6 +103,22 @@ services:
         interval: 10s
         timeout: 5s
         retries: 5
+  loki:
+    image: grafana/loki:latest
+    user: "0"
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki/loki-config.yaml:/etc/loki/loki-config.yaml
+      - ./monitoring/loki/loki-data:/loki
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "-S", "http://localhost:3100/ready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
   prometheus:
     image: prom/prometheus:latest
     volumes:

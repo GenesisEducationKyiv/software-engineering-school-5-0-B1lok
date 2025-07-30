@@ -3,7 +3,7 @@ FROM --platform=$BUILDPLATFORM golang:${GO_VERSION} AS build
 WORKDIR /src
 
 COPY apps/notification/go.mod apps/notification/go.sum ./apps/notification/
-COPY proto-contracts/ ./proto-contracts/
+COPY pkg/ ./pkg/
 
 RUN --mount=type=cache,target=/go/pkg/mod/ \
     cd apps/notification && go mod download -x
@@ -15,7 +15,7 @@ ARG TARGETARCH
 RUN --mount=type=cache,target=/go/pkg/mod/ \
     cd apps/notification && CGO_ENABLED=0 GOARCH=$TARGETARCH go build -o /bin/server ./cmd/http-server
 
-FROM alpine:latest AS final
+FROM alpine:3.19 AS final
 
 COPY apps/notification/templates /templates
 COPY apps/notification/migrations /migrations

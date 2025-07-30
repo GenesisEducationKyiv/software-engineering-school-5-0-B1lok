@@ -42,6 +42,7 @@ func main() {
 
 func run() error {
 	cfg, err := config.LoadConfig()
+	logger.Configure(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}

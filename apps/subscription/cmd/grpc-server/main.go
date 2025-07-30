@@ -4,9 +4,17 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"subscription-service/pkg/logger"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"subscription-service/internal/infrastructure/prometheus"
 
 	"github.com/rs/zerolog/log"
 
@@ -16,7 +24,6 @@ import (
 	"subscription-service/internal/infrastructure/db/postgres/outbox/relay"
 	pgsubscription "subscription-service/internal/infrastructure/db/postgres/subscription"
 
-	_ "github.com/B1lok/proto-contracts"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"google.golang.org/grpc"
@@ -41,6 +48,7 @@ func main() {
 //nolint:gocyclo
 func run() error {
 	cfg, err := config.LoadConfig()
+	logger.Configure(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
@@ -56,6 +64,7 @@ func run() error {
 
 	// Initialize infrastructure components
 	txManager := middleware.NewTxManager(db)
+	appMetrics := prometheus.NewAppMetrics()
 	validationClient, conn, err := validator.NewClient(cfg.ValidatorAddress)
 	if err != nil {
 		cancel()
@@ -105,11 +114,13 @@ func run() error {
 		cancel()
 		return fmt.Errorf("failed to create RabbitMQ publisher: %w", err)
 	}
+	defer publisher.Close()
+
 	dispatcher := event.NewDispatcher()
 	dispatcher.Register(pgevent.NewUserSubscribedHandler(cfg.Server.Host, outboxRepo))
 	dispatcher.Register(rbevent.NewWeatherUpdateHandler(cfg.Server.Host, publisher))
 	subscriptionService := subscription.NewService(
-		subscriptionRepo, cityValidator, dispatcher)
+		subscriptionRepo, cityValidator, dispatcher, appMetrics)
 
 	// Initialize handlers
 	subscriptionHandler := grpcsubscription.NewHandler(subscriptionService)
@@ -123,14 +134,9 @@ func run() error {
 	jobManager.RegisterJob(relay.NewRelayJob(publisher, txManager, outboxRepo))
 	go jobManager.StartScheduler()
 
-	// Initialize server
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Server.GrpcPort))
-	if err != nil {
-		return fmt.Errorf("failed to listen: %v", err)
-	}
-
 	s := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
+			middleware.MetricsInterceptor(appMetrics),
 			middleware.GRPCErrorInterceptor(),
 			middleware.GRPCTransaction(txManager),
 		),
@@ -138,15 +144,58 @@ func run() error {
 
 	grpcsubscription.RegisterSubscriptionServiceServer(s, subscriptionHandler)
 
+	// Initialize server
+	grpcErrChan := make(chan error, 1)
+	httpErrChan := make(chan error, 1)
+
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+
+	metricsServer := &http.Server{
+		Addr:              fmt.Sprintf(":%s", cfg.MetricsPort),
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", cfg.Server.GrpcPort))
+	if err != nil {
+		return fmt.Errorf("failed to listen: %v", err)
+	}
+
 	go func() {
-		<-ctx.Done()
-		log.Info().Msg("Shutting down gRPC server...")
-		s.GracefulStop()
+		log.Info().Msgf("gRPC server listening on :%s", cfg.Server.GrpcPort)
+		if err := s.Serve(lis); err != nil {
+			grpcErrChan <- err
+		}
 	}()
 
-	log.Info().Msgf("gRPC server listening on :%s", cfg.Server.GrpcPort)
-	if err := s.Serve(lis); err != nil {
-		return fmt.Errorf("failed to serve: %v", err)
+	go func() {
+		log.Info().Msgf("Metrics HTTP server listening on :%s", cfg.MetricsPort)
+		if err := metricsServer.ListenAndServe(); err != nil {
+			httpErrChan <- err
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		log.Info().Msg("Shutdown initiated...")
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if err := metricsServer.Shutdown(shutdownCtx); err != nil {
+			log.Error().Err(err).Msg("Metrics HTTP shutdown error")
+		}
+		s.GracefulStop()
+		log.Info().Msg("Gracefully stopped")
+		return nil
+
+	case err := <-httpErrChan:
+		log.Printf("HTTP metrics server error: %v", err)
+		return err
+
+	case err := <-grpcErrChan:
+		log.Printf("gRPC server error: %v", err)
+		return err
 	}
-	return nil
 }

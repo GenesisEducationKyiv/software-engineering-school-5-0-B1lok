@@ -3,7 +3,7 @@ module weather-service
 go 1.24.3
 
 require (
-	github.com/B1lok/proto-contracts v0.0.0
+	common v0.0.0
 	github.com/envoyproxy/protoc-gen-validate v1.2.1
 	github.com/gin-gonic/gin v1.10.1
 	github.com/go-viper/mapstructure/v2 v2.3.0
@@ -22,7 +22,7 @@ require (
 	google.golang.org/protobuf v1.36.6
 )
 
-replace github.com/B1lok/proto-contracts => ../../proto-contracts
+replace common => ../../pkg
 
 require (
 	dario.cat/mergo v1.0.1 // indirect

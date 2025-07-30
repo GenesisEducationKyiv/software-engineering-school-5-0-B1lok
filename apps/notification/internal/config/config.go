@@ -17,11 +17,13 @@ const (
 )
 
 type Config struct {
-	DB                 DBConfig    `config:"db"`
-	Email              EmailConfig `config:"email"`
-	ServerPort         string      `config:"server_port"`
-	RabbitMqURL        string      `config:"rabbitmq_url"`
-	WeatherServiceAddr string      `config:"weather_service"`
+	DB                 DBConfig         `config:"db"`
+	Email              EmailConfig      `config:"email"`
+	ServerPort         string           `config:"server_port"`
+	RabbitMqURL        string           `config:"rabbitmq_url"`
+	WeatherServiceAddr string           `config:"weather_service"`
+	LogSampling        LogSamplingRates `config:"log_sampling"`
+	LokiHost           string           `config:"loki_host"`
 }
 
 type EmailConfig struct {
@@ -40,9 +42,18 @@ type DBConfig struct {
 	Name     string `config:"name"`
 }
 
+type LogSamplingRates struct {
+	Enabled bool    `config:"enabled"`
+	Trace   float64 `config:"trace"`
+	Debug   float64 `config:"debug"`
+	Info    float64 `config:"info"`
+	Warn    float64 `config:"warn"`
+	Error   float64 `config:"error"`
+}
+
 func LoadConfig() (Config, error) {
 	if err := loadEnvFile(defaultEnvFile); err != nil {
-		log.Warn().Err(err).Msg("warning: failed to load .env file")
+		log.Warn().Err(err).Msg("failed to load .env file")
 	}
 
 	var config Config

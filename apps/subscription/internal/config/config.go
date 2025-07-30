@@ -18,10 +18,13 @@ const (
 )
 
 type Config struct {
-	DB               DBConfig     `config:"db"`
-	Server           ServerConfig `config:"server"`
-	ValidatorAddress string       `config:"validator_address"`
-	RabbitMqURL      string       `config:"rabbitmq_url"`
+	DB               DBConfig         `config:"db"`
+	Server           ServerConfig     `config:"server"`
+	ValidatorAddress string           `config:"validator_address"`
+	RabbitMqURL      string           `config:"rabbitmq_url"`
+	MetricsPort      string           `config:"metrics_port"`
+	LogSampling      LogSamplingRates `config:"log_sampling"`
+	LokiHost         string           `config:"loki_host"`
 }
 
 type DBConfig struct {
@@ -38,9 +41,18 @@ type ServerConfig struct {
 	GrpcPort string `config:"grpc_port"`
 }
 
+type LogSamplingRates struct {
+	Enabled bool    `config:"enabled"`
+	Trace   float64 `config:"trace"`
+	Debug   float64 `config:"debug"`
+	Info    float64 `config:"info"`
+	Warn    float64 `config:"warn"`
+	Error   float64 `config:"error"`
+}
+
 func LoadConfig() (Config, error) {
 	if err := loadEnvFile(defaultEnvFile); err != nil {
-		log.Warn().Err(err).Msgf("Could not load config")
+		log.Warn().Err(err).Msgf("loading config")
 	}
 
 	var config Config

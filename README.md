@@ -135,3 +135,173 @@ Build and run the application using Docker Compose:
 docker compose -f docker-compose.base.yml -f docker-compose.dev.yml up --build
 ```
 Application now available at http://localhost:8080/ with a custom subscription page
+
+Observability
+================================================================
+
+Infrastructure Alerts
+---------------------
+
+### CPU Usage Alert
+
+*   **Threshold**: CPU usage > 80% for 5 consecutive minutes
+
+*   **Rationale**: High CPU usage can indicate resource exhaustion, inefficient code execution, or unexpected load spikes. Early detection prevents service degradation and allows for proactive scaling or optimization.
+
+
+### Memory Usage Alert
+
+*   **Threshold**: RAM usage > 85% for 3 consecutive minutes
+
+*   **Rationale**: Memory leaks or high memory consumption can lead to application crashes or slow performance. Monitoring RAM usage ensures stable operation and helps identify memory-related issues before they impact users.
+
+
+Application Performance Alerts
+------------------------------
+
+### Response Time Alert (95th Percentile)
+
+*   **Threshold**: 95th percentile response time > 500ms for any endpoint
+
+*   **Rationale**: The 95th percentile provides insight into the user experience for the majority of requests while accounting for occasional slower responses. Weather data requests should be fast to maintain good user experience.
+
+
+### Server Error Rate Alert
+
+*   **Threshold**: More than 10 HTTP 5xx errors within a 5-minute window
+
+*   **Rationale**: Server errors (500-599) indicate critical issues such as database connectivity problems, third-party API failures, or application bugs. Quick detection allows for immediate investigation and prevents cascading failures that could affect weather data delivery.
+
+
+### Database Connection Alert
+
+*   **Threshold**: Database connection pool utilization > 90%
+
+*   **Rationale**: Weather subscription services rely heavily on database operations for subscription tracking. Connection pool exhaustion can cause service unavailability.
+
+---------------------------------
+
+*   **Threshold**: Average database response time > 100ms over a 5-minute window
+
+*   **Rationale**: Consistently high database latency can indicate performance bottlenecks or infrastructure issues. This can degrade user experience and delay critical operations like subscription processing and message delivery.
+
+Log Retention Policy by Log Level
+---------------------------------
+
+### TRACE Level Logs
+
+*   **Retention Period**: 3 days in hot storage only
+
+*   **Cleanup Schedule**: Daily automated cleanup at 2 AM UTC
+
+*   **Archive Strategy**: No archiving (immediate deletion after 3 days)
+
+*   **Rationale**: TRACE logs contain the most granular debugging information and generate extremely high volume. They are primarily used for immediate debugging sessions and active development. Extended retention would create massive storage costs with minimal operational value. The 3-day window allows for recent issue investigation while preventing storage bloat.
+
+
+### DEBUG Level Logs
+
+*   **Retention Period**: 7 days in hot storage, no archiving
+
+*   **Cleanup Schedule**: Daily automated cleanup at 2:15 AM UTC
+
+*   **Archive Strategy**: No archiving (immediate deletion after 7 days)
+
+*   **Rationale**: DEBUG logs provide detailed application flow information useful for troubleshooting complex issues. One week retention covers most debugging scenarios for weather service logic, subscription processing, and API integrations. DEBUG logs are too verbose for long-term storage but more valuable than TRACE for operational troubleshooting.
+
+
+### INFO Level Logs
+
+*   **Retention Period**: 30 days in hot storage, 6 months in cold storage
+
+*   **Cleanup Schedule**: Daily automated cleanup at 2:30 AM UTC
+
+*   **Archive Strategy**: Compress and move to cold storage after 30 days
+
+*   **Rationale**: INFO logs capture normal application operations, user activities, and business events. This data is valuable for understanding usage patterns, subscription trends, and service performance over time. 30-day immediate access supports operational monitoring, while 6-month archive enables seasonal analysis for weather subscription patterns.
+
+
+### WARN Level Logs
+
+*   **Retention Period**: 60 days in hot storage, 12 months in cold storage
+
+*   **Cleanup Schedule**: Daily automated cleanup at 2:45 AM UTC
+
+*   **Archive Strategy**: Compress and categorize warnings by type before archiving
+
+*   **Rationale**: WARN logs indicate potential issues that don't immediately break functionality but may lead to problems. Weather services often have intermittent external API issues, temporary network problems, or degraded performance that manifest as warnings. Extended retention helps identify recurring warning patterns and prevents them from escalating to errors.
+
+
+### ERROR Level Logs
+
+*   **Retention Period**: 90 days in hot storage, 24 months in cold storage
+
+*   **Cleanup Schedule**: Weekly automated cleanup with error categorization
+
+*   **Archive Strategy**: Categorize by error type, maintain full context and stack traces
+
+*   **Rationale**: ERROR logs represent actual failures that impact user experience or system functionality. Long retention is critical for root cause analysis, identifying recurring issues, and understanding error patterns across different weather conditions and seasonal usage variations. Two-year archive supports compliance requirements and long-term system reliability analysis.
+
+
+Storage Strategy
+----------------
+
+### Hot Storage (Immediate Access)
+
+*   **Technology**: SSD-based storage with full-text search indexing
+
+*   **Access Time**: < 1 second query response
+
+*   **Cost**: Higher storage cost, optimized for frequent access
+
+
+### Cold Storage (Archive)
+
+*   **Technology**: Object storage (S3, Azure Blob) with compression
+
+*   **Access Time**: 1-5 minutes retrieval time
+
+*   **Cost**: Lower storage cost, optimized for long-term retention
+
+Log Access by Role
+------------------
+
+### TRACE Logs
+*   **Who can access**: Developers, DevOps engineers
+*   **Restrictions**: Development environment only
+*   **Audit**: All access attempts logged
+
+### DEBUG Logs
+*   **Who can access**: Developers, QA, L2+ support
+*   **Restrictions**: Business hours only (except incidents)
+*   **Audit**: Access time and search queries logged
+
+### INFO Logs
+*   **Who can access**: All tech staff, product managers, analysts
+*   **Restrictions**: Support sees anonymized data only
+*   **Audit**: Basic access logging
+
+### WARN Logs
+*   **Who can access**: Tech staff, operations, management
+*   **Restrictions**: Management gets summary reports only
+*   **Audit**: Detailed logging for technical access
+
+### ERROR Logs
+*   **Who can access**: All tech roles, management, legal (on request)
+*   **Restrictions**: Legal needs approval
+*   **Audit**: Full audit with access reason
+
+Log Access Audit
+-----------------
+
+### What we track
+*   Who accessed (user, role, IP address)
+*   When and what they viewed
+*   Search queries used
+*   Data exported
+
+### Audit storage
+*   **Retention**: 2 years
+*   **Location**: Separate secure database
+*   **Reports**: Monthly automated reports
+*   **Alerts**: For suspicious activity

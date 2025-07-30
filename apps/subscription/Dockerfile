@@ -3,7 +3,7 @@ FROM --platform=$BUILDPLATFORM golang:${GO_VERSION} AS build
 WORKDIR /src
 
 COPY apps/subscription/go.mod apps/subscription/go.sum ./apps/subscription/
-COPY proto-contracts/ ./proto-contracts/
+COPY pkg/ ./pkg/
 
 RUN --mount=type=cache,target=/go/pkg/mod/ \
     cd apps/subscription && go mod download -x
@@ -15,7 +15,7 @@ ARG TARGETARCH
 RUN --mount=type=cache,target=/go/pkg/mod/ \
     cd apps/subscription && CGO_ENABLED=0 GOARCH=$TARGETARCH go build -o /bin/server ./cmd/grpc-server
 
-FROM alpine:latest AS final
+FROM alpine:3.19 AS final
 
 COPY apps/subscription/templates /templates
 COPY apps/subscription/migrations /migrations

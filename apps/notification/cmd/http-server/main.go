@@ -7,6 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"notification/pkg/logger"
+
 	"github.com/rs/zerolog/log"
 
 	"notification/internal/infrastructure/postgres"
@@ -21,7 +23,6 @@ import (
 	"notification/internal/interface/rabbitmq"
 	"notification/pkg"
 
-	_ "github.com/B1lok/proto-contracts"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -38,6 +39,7 @@ func main() {
 //nolint:gocyclo
 func run() error {
 	cfg, err := config.LoadConfig()
+	logger.Configure(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
