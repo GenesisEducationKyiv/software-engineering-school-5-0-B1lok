@@ -1,11 +1,10 @@
 package outbox
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
-
-	"gorm.io/datatypes"
 )
 
 type Status string
@@ -20,16 +19,12 @@ const (
 )
 
 type Message struct {
-	ID          uint           `gorm:"primaryKey"`
-	AggregateID uint           `gorm:"not null"`
-	MessageID   uuid.UUID      `gorm:"type:uuid"`
-	EventType   EventType      `gorm:"type:event_type_enum;not null"`
-	Payload     datatypes.JSON `gorm:"type:jsonb;not null"`
-	Status      Status         `gorm:"type:status_enum;default:'new'"`
-	CreatedAt   time.Time      `gorm:"type:timestamp with time zone;default:now()"`
-	UpdatedAt   time.Time      `gorm:"type:timestamp with time zone;default:now()"`
-}
-
-func (Message) TableName() string {
-	return "outbox"
+	ID          uint
+	AggregateID uint
+	MessageID   uuid.UUID
+	EventType   EventType
+	Payload     json.RawMessage
+	Status      Status
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }

@@ -1,17 +1,33 @@
 package postgres
 
 import (
+	"context"
 	"fmt"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"net/url"
 
 	"subscription-service/internal/config"
-
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
-func ConnectDB(cfg config.DBConfig) (*gorm.DB, error) {
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Name)
+type DB struct {
+	Pool *pgxpool.Pool
+}
 
-	return gorm.Open(postgres.Open(dsn), &gorm.Config{})
+func ConnectDB(ctx context.Context, cfg config.DBConfig) (*DB, error) {
+	escapedPassword := url.QueryEscape(cfg.Password)
+	dsn := fmt.Sprintf(
+		"postgresql://%s:%s@%s:%s/%s?sslmode=disable",
+		cfg.User, escapedPassword, cfg.Host, cfg.Port, cfg.Name,
+	)
+
+	pool, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
+
+	return &DB{Pool: pool}, nil
+}
+
+func (db *DB) Close() {
+	db.Pool.Close()
 }

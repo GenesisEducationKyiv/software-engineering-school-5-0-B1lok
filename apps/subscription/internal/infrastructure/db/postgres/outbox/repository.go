@@ -2,8 +2,8 @@ package outbox
 
 import (
 	"context"
-
-	"gorm.io/gorm"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"time"
 
 	internalErrors "subscription-service/internal/errors"
 	pkgErrors "subscription-service/pkg/errors"
@@ -11,17 +11,34 @@ import (
 )
 
 type Repository struct {
-	db *gorm.DB
+	pool *pgxpool.Pool
 }
 
-func NewOutboxRepository(db *gorm.DB) *Repository {
-	return &Repository{db: db}
+func NewOutboxRepository(pool *pgxpool.Pool) *Repository {
+	return &Repository{pool: pool}
 }
 
 func (r *Repository) Save(ctx context.Context, outbox Message) error {
 	db := r.getDB(ctx)
 
-	if err := db.Create(&outbox).Error; err != nil {
+	query := `
+        INSERT INTO outbox (aggregate_id, event_type, payload, status, message_id, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING id, created_at, updated_at`
+
+	now := time.Now()
+	_, err := db.Exec(
+		ctx, query,
+		outbox.AggregateID,
+		outbox.EventType,
+		outbox.Payload,
+		outbox.Status,
+		outbox.MessageID,
+		now,
+		now,
+	)
+
+	if err != nil {
 		return pkgErrors.New(
 			internalErrors.ErrInternal, "failed to create outbox message",
 		)
@@ -33,21 +50,42 @@ func (r *Repository) Save(ctx context.Context, outbox Message) error {
 func (r *Repository) GetPendingMessages(ctx context.Context, limit int) ([]Message, error) {
 	db := r.getDB(ctx)
 
-	var messages []Message
+	const query = `
+		SELECT id, aggregate_id, message_id, event_type, payload, status, created_at, updated_at
+		FROM outbox
+		WHERE status = $1 OR status = $2
+		ORDER BY created_at
+		LIMIT $3
+		FOR UPDATE SKIP LOCKED
+	`
 
-	err := db.Raw(`
-			SELECT id, aggregate_id, message_id, event_type, payload, status, created_at, updated_at 
-			FROM outbox 
-			WHERE status IN (?, ?) 
-			ORDER BY created_at 
-			LIMIT ? 
-			FOR UPDATE SKIP LOCKED
-		`, StatusPending, StatusFailed, limit).Scan(&messages).Error
-
+	rows, err := db.Query(ctx, query, StatusPending, StatusFailed, limit)
 	if err != nil {
-		return nil, pkgErrors.New(
-			internalErrors.ErrInternal, "failed to get pending messages",
+		return nil, pkgErrors.New(internalErrors.ErrInternal, "failed to execute query: "+err.Error())
+	}
+	defer rows.Close()
+
+	var messages []Message
+	for rows.Next() {
+		var m Message
+		err := rows.Scan(
+			&m.ID,
+			&m.AggregateID,
+			&m.MessageID,
+			&m.EventType,
+			&m.Payload,
+			&m.Status,
+			&m.CreatedAt,
+			&m.UpdatedAt,
 		)
+		if err != nil {
+			return nil, pkgErrors.New(internalErrors.ErrInternal, "failed to scan row: "+err.Error())
+		}
+		messages = append(messages, m)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, pkgErrors.New(internalErrors.ErrInternal, "row iteration error: "+err.Error())
 	}
 
 	return messages, nil
@@ -56,14 +94,20 @@ func (r *Repository) GetPendingMessages(ctx context.Context, limit int) ([]Messa
 func (r *Repository) UpdateStatus(ctx context.Context, messageID uint, status Status) error {
 	db := r.getDB(ctx)
 
-	result := db.Model(&Message{}).Where("id = ?", messageID).Update("status", status)
-	if result.Error != nil {
+	query := `
+        UPDATE outbox 
+        SET status = $1, updated_at = $2
+        WHERE id = $3`
+
+	now := time.Now()
+	tag, err := db.Exec(ctx, query, status, now, messageID)
+	if err != nil {
 		return pkgErrors.New(
 			internalErrors.ErrInternal, "failed to update message status",
 		)
 	}
 
-	if result.RowsAffected == 0 {
+	if tag.RowsAffected() == 0 {
 		return pkgErrors.New(
 			internalErrors.ErrInternal, "message not found or not updated",
 		)
@@ -72,9 +116,9 @@ func (r *Repository) UpdateStatus(ctx context.Context, messageID uint, status St
 	return nil
 }
 
-func (r *Repository) getDB(ctx context.Context) *gorm.DB {
+func (r *Repository) getDB(ctx context.Context) *pgxpool.Pool {
 	if tx, ok := middleware.GetTx(ctx); ok {
 		return tx
 	}
-	return r.db
+	return r.pool
 }
