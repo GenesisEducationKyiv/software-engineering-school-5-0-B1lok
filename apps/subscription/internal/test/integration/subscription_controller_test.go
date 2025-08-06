@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
 	"net/http"
 	"net/http/httptest"
@@ -27,19 +28,19 @@ import (
 	"subscription-service/internal/test/stubs"
 	"subscription-service/pkg/middleware"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/stretchr/testify/suite"
-	"gorm.io/gorm"
 )
 
 type SubscriptionControllerTestSuite struct {
 	suite.Suite
 	Router   *gin.Engine
 	Postgres *containers.PostgresContainer
-	DB       *gorm.DB
+	DB       *pgxpool.Pool
 }
 
 func (suite *SubscriptionControllerTestSuite) SetupSuite() {
@@ -63,23 +64,23 @@ func (suite *SubscriptionControllerTestSuite) SetupSuite() {
 		Name:     "testdb",
 	}
 
-	db, err := appPostgres.ConnectDB(cfg)
+	db, err := appPostgres.ConnectDB(ctx, cfg)
 	suite.Require().NoError(err)
-	suite.DB = db
+	suite.DB = db.Pool
 	appPostgres.RunMigrationsWithPath(cfg, getMigrationPath())
 
 	cityValidator := stubs.NewCityValidatorStub()
 	recorder := stubs.NewRecorderStub()
-	outboxRepo := outbox.NewOutboxRepository(db)
+	outboxRepo := outbox.NewOutboxRepository(db.Pool)
 	dispatcher := event.NewDispatcher()
 	dispatcher.Register(pgevent.NewUserSubscribedHandler(serverHost, outboxRepo))
 	dispatcher.Register(rbevent.NewWeatherUpdateHandler(serverHost, stubs.NewPublisherStub()))
-	subscriptionRepo := pgsubscription.NewRepository(db)
+	subscriptionRepo := pgsubscription.NewRepository(db.Pool)
 	subscriptionService := subscription.NewService(
 		subscriptionRepo, cityValidator, dispatcher, recorder,
 	)
 	subscriptionController := rest.NewSubscriptionController(subscriptionService)
-	txManager := middleware.NewTxManager(db)
+	txManager := middleware.NewTxManager(db.Pool)
 
 	router := gin.Default()
 	router.Use(middleware.HttpErrorHandler())
@@ -96,13 +97,28 @@ func (suite *SubscriptionControllerTestSuite) SetupSuite() {
 }
 
 func (suite *SubscriptionControllerTestSuite) TearDownTest() {
-	result := suite.DB.Exec("DELETE FROM subscriptions")
-	suite.Require().NoError(result.Error)
+	_, err := suite.DB.Exec(context.Background(), "DELETE FROM subscriptions")
+	suite.Require().NoError(err)
 }
 
-func (suite *SubscriptionControllerTestSuite) insertTestData(data interface{}) {
-	result := suite.DB.Create(data)
-	suite.Require().NoError(result.Error)
+func (suite *SubscriptionControllerTestSuite) insertTestData(s *domain.Subscription) {
+	ctx := context.Background()
+	now := time.Now()
+
+	_, err := suite.DB.Exec(ctx, `
+		INSERT INTO subscriptions (
+			email, city, frequency, token, confirmed, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`,
+		s.Email,
+		s.City,
+		s.Frequency,
+		s.Token,
+		s.Confirmed,
+		now,
+		now,
+	)
+	suite.Require().NoError(err)
 }
 
 func (suite *SubscriptionControllerTestSuite) TestSubscribe() {
@@ -119,8 +135,11 @@ func (suite *SubscriptionControllerTestSuite) TestSubscribe() {
 	suite.Equal(http.StatusOK, resp.Code)
 
 	var count int64
-	err := suite.DB.Model(&domain.Subscription{}).
-		Where("email = ?", "test@example.com").Count(&count).Error
+	err := suite.DB.QueryRow(
+		context.Background(),
+		`SELECT COUNT(*) FROM subscriptions WHERE email = $1`,
+		"test@example.com",
+	).Scan(&count)
 	suite.Require().NoError(err)
 	suite.Equal(int64(1), count)
 }
@@ -186,10 +205,14 @@ func (suite *SubscriptionControllerTestSuite) TestConfirmSubscription() {
 	suite.Require().NoError(err)
 	suite.Contains(response, "message")
 
-	var subscription domain.Subscription
-	err = suite.DB.Where("token = ?", token).First(&subscription).Error
+	var confirmed bool
+	err = suite.DB.QueryRow(
+		context.Background(),
+		`SELECT confirmed FROM subscriptions WHERE token = $1`,
+		token,
+	).Scan(&confirmed)
 	suite.Require().NoError(err)
-	suite.True(subscription.Confirmed)
+	suite.True(confirmed)
 }
 
 func (suite *SubscriptionControllerTestSuite) TestConfirmSubscription_InvalidToken() {
@@ -238,7 +261,11 @@ func (suite *SubscriptionControllerTestSuite) TestUnsubscribe() {
 	suite.Contains(response, "message")
 
 	var count int64
-	err = suite.DB.Model(&domain.Subscription{}).Where("token = ?", token).Count(&count).Error
+	err = suite.DB.QueryRow(
+		context.Background(),
+		`SELECT COUNT(*) FROM subscriptions WHERE token = $1`,
+		token,
+	).Scan(&count)
 	suite.Require().NoError(err)
 	suite.Equal(int64(0), count)
 }

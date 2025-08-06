@@ -4,14 +4,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"time"
+	"github.com/rs/zerolog/log"
 
 	"subscription-service/internal/domain"
 	internalErrors "subscription-service/internal/errors"
 	pkgErrors "subscription-service/pkg/errors"
 	"subscription-service/pkg/middleware"
+)
+
+const (
+	channelSize = 1000
+	fetchSize   = 1000
 )
 
 type Repository struct {
@@ -169,39 +176,132 @@ func (r *Repository) FindByToken(
 	return &subscription, nil
 }
 
-func (r *Repository) FindGroupedSubscriptions(
+func (r *Repository) StreamSubscriptions(
 	ctx context.Context, frequency *domain.Frequency,
-) ([]*domain.GroupedSubscription, error) {
-	var subscriptions []Entity
-	db := r.getDB(ctx)
+) (<-chan domain.Subscription, <-chan error, error) {
+	subCh := make(chan domain.Subscription, channelSize)
+	errCh := make(chan error, 1)
 
-	err := db.
-		Where("confirmed = ? AND frequency = ?", true, frequency).
-		Find(&subscriptions).Error
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{
+		AccessMode: pgx.ReadOnly,
+	})
 	if err != nil {
-		return nil, pkgErrors.New(
-			internalErrors.ErrInternal, "failed to find confirmed subscriptions",
-		)
+		return nil, nil, fmt.Errorf("begin tx: %w", err)
 	}
 
-	subscriptionMap := make(map[string][]Entity)
-	for _, sub := range subscriptions {
-		subscriptionMap[sub.City] = append(subscriptionMap[sub.City], sub)
-	}
+	cursorName := fmt.Sprintf("subscriptions_cursor_%d", time.Now().UnixNano())
 
-	grouped := make([]*domain.GroupedSubscription, 0, len(subscriptionMap))
-	for city, subscriptions := range subscriptionMap {
-		domainSubs, err := toDomainList(subscriptions)
+	if err := declareCursor(ctx, tx, cursorName, frequency); err != nil {
+		err := tx.Rollback(ctx)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		grouped = append(grouped, &domain.GroupedSubscription{
-			City:          city,
-			Subscriptions: domainSubs,
-		})
+		return nil, nil, fmt.Errorf("declare cursor: %w", err)
 	}
 
-	return grouped, nil
+	go func() {
+		defer close(subCh)
+		defer close(errCh)
+		defer rollbackSafely(tx, ctx)
+
+		for {
+			count, err := fetchNext(ctx, tx, cursorName, subCh)
+			if err != nil {
+				errCh <- err
+				return
+			}
+			if count == 0 {
+				break
+			}
+		}
+
+		if err := closeCursor(ctx, tx, cursorName); err != nil {
+			errCh <- err
+			return
+		}
+		if err := tx.Commit(ctx); err != nil {
+			errCh <- fmt.Errorf("failed to commit transaction: %w", err)
+			return
+		}
+	}()
+
+	return subCh, errCh, nil
+}
+
+func declareCursor(
+	ctx context.Context,
+	tx pgx.Tx,
+	cursorName string,
+	freq *domain.Frequency,
+) error {
+	query := fmt.Sprintf(`
+		DECLARE %s CURSOR FOR
+		SELECT id, email, city, frequency, token, confirmed, created_at, updated_at
+		FROM subscriptions
+		WHERE confirmed = true AND frequency = $1
+		ORDER BY id`, cursorName)
+	_, err := tx.Exec(ctx, query, freq)
+	return err
+}
+
+func closeCursor(ctx context.Context, tx pgx.Tx, cursorName string) error {
+	query := fmt.Sprintf("CLOSE %s", cursorName)
+	_, err := tx.Exec(ctx, query)
+	if err != nil {
+		return fmt.Errorf("close cursor: %w", err)
+	}
+	return nil
+}
+
+func fetchNext(
+	ctx context.Context,
+	tx pgx.Tx,
+	cursorName string,
+	out chan<- domain.Subscription,
+) (int, error) {
+	query := fmt.Sprintf("FETCH %d FROM %s", fetchSize, cursorName)
+	rows, err := tx.Query(ctx, query)
+	if err != nil {
+		return 0, fmt.Errorf("fetch from cursor: %w", err)
+	}
+	defer rows.Close()
+
+	count := 0
+	for rows.Next() {
+		sub, err := scanSubscription(rows)
+		if err != nil {
+			return 0, fmt.Errorf("scan subscription: %w", err)
+		}
+
+		select {
+		case <-ctx.Done():
+			return 0, ctx.Err()
+		case out <- sub:
+			count++
+		}
+	}
+	return count, nil
+}
+
+func scanSubscription(row pgx.Row) (domain.Subscription, error) {
+	var s domain.Subscription
+	err := row.Scan(
+		&s.ID,
+		&s.Email,
+		&s.City,
+		&s.Frequency,
+		&s.Token,
+		&s.Confirmed,
+		&s.CreatedAt,
+		&s.UpdatedAt,
+	)
+	return s, err
+}
+
+func rollbackSafely(tx pgx.Tx, ctx context.Context) {
+	if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+		log.Ctx(ctx).Error().Err(err).Msg("rollback failed")
+	}
 }
 
 func (r *Repository) getDB(ctx context.Context) *pgxpool.Pool {

@@ -5,17 +5,17 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/docker/go-connections/nat"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
 type PostgresContainer struct {
 	Container testcontainers.Container
 	URI       string
-	DB        *gorm.DB
+	DB        *pgxpool.Pool
 }
 
 func SetupPostgresContainer(ctx context.Context) (*PostgresContainer, error) {
@@ -58,10 +58,10 @@ func SetupPostgresContainer(ctx context.Context) (*PostgresContainer, error) {
 		"host=%s user=test password=test dbname=testdb port=%s sslmode=disable",
 		host, port.Port())
 
-	db, err := gorm.Open(postgres.Open(uri), &gorm.Config{})
+	pool, err := pgxpool.New(ctx, uri)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to connect with pgxpool: %w", err)
 	}
 
-	return &PostgresContainer{Container: container, URI: uri, DB: db}, nil
+	return &PostgresContainer{Container: container, URI: uri, DB: pool}, nil
 }

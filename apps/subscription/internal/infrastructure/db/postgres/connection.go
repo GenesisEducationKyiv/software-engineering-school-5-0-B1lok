@@ -3,8 +3,9 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"net/url"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"subscription-service/internal/config"
 )

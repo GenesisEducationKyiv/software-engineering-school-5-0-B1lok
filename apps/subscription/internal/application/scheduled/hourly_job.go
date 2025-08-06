@@ -9,7 +9,7 @@ type HourlyWeatherUpdateJob struct {
 }
 
 func NewHourlyWeatherUpdateJob(
-	subscriptionRepo GroupedSubscriptionReader,
+	subscriptionRepo SubscriptionReader,
 	dispatcher EventDispatcher,
 ) *HourlyWeatherUpdateJob {
 	exec := NewWeatherJobExecutor(

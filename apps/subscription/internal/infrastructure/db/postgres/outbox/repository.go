@@ -2,8 +2,9 @@ package outbox
 
 import (
 	"context"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	internalErrors "subscription-service/internal/errors"
 	pkgErrors "subscription-service/pkg/errors"
@@ -22,8 +23,11 @@ func (r *Repository) Save(ctx context.Context, outbox Message) error {
 	db := r.getDB(ctx)
 
 	query := `
-        INSERT INTO outbox (aggregate_id, event_type, payload, status, message_id, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO outbox (
+            aggregate_id, event_type, payload, status, message_id, created_at, updated_at
+        ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7
+        )
         RETURNING id, created_at, updated_at`
 
 	now := time.Now()
