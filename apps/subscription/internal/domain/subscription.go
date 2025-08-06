@@ -34,11 +34,6 @@ type SubscriptionLookup struct {
 	Frequency Frequency
 }
 
-type GroupedSubscription struct {
-	City          string
-	Subscriptions []*Subscription
-}
-
 func NewSubscription(email, city string, frequency Frequency) (*Subscription, error) {
 	sub := &Subscription{
 		Email:     email,

@@ -13,14 +13,12 @@ import (
 	"subscription-service/internal/application/event"
 	"subscription-service/internal/domain"
 	internalErrors "subscription-service/internal/errors"
-	"subscription-service/internal/test/mocks"
 	pkgErrors "subscription-service/pkg/errors"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 type mockEventDispatcher struct {
@@ -56,6 +54,46 @@ func (m *mockEventDispatcher) GetDispatchedEvents() []event.Event {
 	return events
 }
 
+type mockSubscriptionRepository struct {
+	Subscriptions []*domain.Subscription
+	ErrCh         chan error
+	StartErr      error
+}
+
+func (m *mockSubscriptionRepository) StreamSubscriptions(
+	ctx context.Context,
+	_ *domain.Frequency,
+) (<-chan domain.Subscription, <-chan error, error) {
+
+	if m.StartErr != nil {
+		return nil, nil, m.StartErr
+	}
+
+	subCh := make(chan domain.Subscription)
+	errCh := make(chan error, 1)
+
+	go func() {
+		defer close(subCh)
+		defer close(errCh)
+
+		for _, sub := range m.Subscriptions {
+			select {
+			case <-ctx.Done():
+				return
+			case subCh <- *sub:
+			}
+		}
+
+		if m.ErrCh != nil {
+			for err := range m.ErrCh {
+				errCh <- err
+			}
+		}
+	}()
+
+	return subCh, errCh, nil
+}
+
 func createTestSubscriptionsForCity(startID uint, city string, count int) []*domain.Subscription {
 	subscriptions := make([]*domain.Subscription, count)
 	for i := 0; i < count; i++ {
@@ -64,22 +102,19 @@ func createTestSubscriptionsForCity(startID uint, city string, count int) []*dom
 	return subscriptions
 }
 
-func createTestGroupedSubscriptionsDynamic(
+func createTestSubscriptionsDynamic(
 	config map[string]int, startID uint,
-) []*domain.GroupedSubscription {
-	grouped := make([]*domain.GroupedSubscription, 0, len(config))
+) []*domain.Subscription {
+	var subscriptions []*domain.Subscription
 	currentID := startID
 
 	for city, count := range config {
 		subs := createTestSubscriptionsForCity(currentID, city, count)
-		grouped = append(grouped, &domain.GroupedSubscription{
-			City:          city,
-			Subscriptions: subs,
-		})
+		subscriptions = append(subscriptions, subs...)
 		currentID += uint(count)
 	}
 
-	return grouped
+	return subscriptions
 }
 
 func generateRandomEmail() string {
@@ -128,12 +163,10 @@ func TestWeatherJobExecutor_Execute_Success(t *testing.T) {
 	frequency := domain.Frequency("hourly")
 	cities := []string{"New York", "London", "Tokyo", "Paris", "Berlin"}
 	citySubCounts := generateRandomCitySubCounts(cities, 100)
-	groupedSubscriptions := createTestGroupedSubscriptionsDynamic(citySubCounts, 1)
+	subscriptions := createTestSubscriptionsDynamic(citySubCounts, 1)
 
-	mockRepo := new(mocks.MockSubscriptionRepository)
-	mockRepo.On("FindGroupedSubscriptions", mock.Anything, &frequency).
-		Return(groupedSubscriptions, nil).
-		Once()
+	mockRepo := &mockSubscriptionRepository{}
+	mockRepo.Subscriptions = subscriptions
 
 	mockDispatch := &mockEventDispatcher{}
 
@@ -146,8 +179,6 @@ func TestWeatherJobExecutor_Execute_Success(t *testing.T) {
 	err := executor.Execute(ctx)
 
 	assert.NoError(t, err)
-
-	mockRepo.AssertExpectations(t)
 
 	expectedSubIDs := calculateExpectedSubIDs(citySubCounts)
 	dispatchedEvents := mockDispatch.GetDispatchedEvents()
@@ -163,10 +194,8 @@ func TestWeatherJobExecutor_Execute_RepositoryError(t *testing.T) {
 	frequency := domain.Frequency("hourly")
 	expectedError := pkgErrors.New(internalErrors.ErrInternal, "repository error")
 
-	mockRepo := new(mocks.MockSubscriptionRepository)
-	mockRepo.On("FindGroupedSubscriptions", mock.Anything, &frequency).
-		Return(nil, expectedError).
-		Once()
+	mockRepo := &mockSubscriptionRepository{}
+	mockRepo.StartErr = expectedError
 
 	mockDispatcher := &mockEventDispatcher{}
 
@@ -181,8 +210,6 @@ func TestWeatherJobExecutor_Execute_RepositoryError(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, expectedError, err)
 
-	mockRepo.AssertExpectations(t)
-
 	assert.Equal(t, 0, mockDispatcher.GetCallCount(),
 		"dispatcherFunc should not be called when repository fails")
 }
@@ -192,12 +219,10 @@ func TestWeatherJobExecutor_Execute_DispatcherError(t *testing.T) {
 	frequency := domain.Frequency("hourly")
 	cities := []string{"New York", "London", "Tokyo", "Paris", "Berlin"}
 	citySubCounts := generateRandomCitySubCounts(cities, 10)
-	groupedSubscriptions := createTestGroupedSubscriptionsDynamic(citySubCounts, 1)
+	subscriptions := createTestSubscriptionsDynamic(citySubCounts, 1)
 
-	mockRepo := new(mocks.MockSubscriptionRepository)
-	mockRepo.On("FindGroupedSubscriptions", mock.Anything, &frequency).
-		Return(groupedSubscriptions, nil).
-		Once()
+	mockRepo := &mockSubscriptionRepository{}
+	mockRepo.Subscriptions = subscriptions
 
 	mockDispatcher := &mockEventDispatcher{
 		dispatchError: pkgErrors.New(internalErrors.ErrInternal, "dispatcher error"),
@@ -213,8 +238,6 @@ func TestWeatherJobExecutor_Execute_DispatcherError(t *testing.T) {
 
 	assert.Error(t, err, "Should return error when dispatcher fail")
 
-	mockRepo.AssertExpectations(t)
-
 	expectedSubIDs := calculateExpectedSubIDs(citySubCounts)
 	assert.Equal(t, len(expectedSubIDs), mockDispatcher.GetCallCount(),
 		"At least one dispatch should be attempted")
@@ -227,12 +250,10 @@ func TestWeatherJobExecutor_Execute_ContextTimeout(t *testing.T) {
 	frequency := domain.Frequency("hourly")
 	cities := []string{"New York", "London", "Tokyo", "Paris", "Berlin"}
 	citySubCounts := generateRandomCitySubCounts(cities, 10)
-	groupedSubscriptions := createTestGroupedSubscriptionsDynamic(citySubCounts, 1)
+	subscriptions := createTestSubscriptionsDynamic(citySubCounts, 1)
 
-	mockRepo := new(mocks.MockSubscriptionRepository)
-	mockRepo.On("FindGroupedSubscriptions", mock.Anything, &frequency).
-		Return(groupedSubscriptions, nil).
-		Maybe()
+	mockRepo := &mockSubscriptionRepository{}
+	mockRepo.Subscriptions = subscriptions
 
 	mockDispatcher := &mockEventDispatcher{}
 

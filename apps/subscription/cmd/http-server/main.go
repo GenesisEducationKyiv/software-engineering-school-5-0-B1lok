@@ -50,14 +50,15 @@ func run() error {
 	defer cancel()
 	postgres.RunMigrations(cfg.DB)
 
-	db, err := postgres.ConnectDB(cfg.DB)
+	db, err := postgres.ConnectDB(ctx, cfg.DB)
 	if err != nil {
 		cancel()
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
+	defer db.Close()
 
 	// Initialize infrastructure components
-	txManager := middleware.NewTxManager(db)
+	txManager := middleware.NewTxManager(db.Pool)
 	appMetrics := prometheus.NewAppMetrics()
 	validationClient, conn, err := validator.NewClient(cfg.ValidatorAddress)
 	if err != nil {
@@ -101,8 +102,8 @@ func run() error {
 	}
 
 	// Initialize repositories
-	subscriptionRepo := pgsubscription.NewRepository(db)
-	outboxRepo := outbox.NewOutboxRepository(db)
+	subscriptionRepo := pgsubscription.NewRepository(db.Pool)
+	outboxRepo := outbox.NewOutboxRepository(db.Pool)
 
 	// Initialize services
 	publisher, err := rabbitmq.NewPublisher(rabbitmqChannel)
